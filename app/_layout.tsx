@@ -29,7 +29,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="log/new"
           options={{
-            title: 'New Log',
+            headerShown: false,
           }}
         />
         <Stack.Screen
