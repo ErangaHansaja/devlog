@@ -1,24 +1,16 @@
-/**
- * Generates a short, collision-safe ID for single-user local storage.
- * Format: base36 timestamp + random suffix (e.g. "lz4k7m3x_a1b2c3")
- */
+/** Generates a unique collision-safe ID. */
 export function generateId(): string {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/**
- * Checks whether the given ISO date string falls on today's calendar date.
- * Uses local timezone comparison via toDateString().
- */
+/** Checks if an ISO date string matches today's local date. */
 export function isToday(dateStr: string): boolean {
   const input = new Date(dateStr);
   const now = new Date();
   return input.toDateString() === now.toDateString();
 }
 
-/**
- * Formats an ISO date string into a short locale-aware display string.
- */
+/** Formats a date string or object into a localized short date. */
 export function formatDate(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString(undefined, {
@@ -28,9 +20,7 @@ export function formatDate(date: string | Date): string {
   });
 }
 
-/**
- * Returns a human-readable relative time string (e.g. "2 hours ago", "yesterday").
- */
+/** Formats a date string into human-readable relative time. */
 export function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
@@ -50,9 +40,7 @@ export function formatRelativeTime(dateStr: string): string {
   return formatDate(dateStr);
 }
 
-/**
- * Truncates text to a maximum length, appending "..." if truncated.
- */
+/** Truncates a string to a maximum length with an ellipsis. */
 export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength)}...`;

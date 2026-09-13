@@ -1,5 +1,6 @@
 import type { FeatureStatus } from '../models';
 
+/** Color palette design tokens for light and dark themes. */
 export const Colors = {
   dark: {
     background: '#121212',
@@ -23,16 +24,17 @@ export const Colors = {
   },
 } as const;
 
+/** Type representation of the dark theme color palette. */
 export type ThemeColors = typeof Colors.dark;
 
-/** Color mapping for feature status badges */
+/** Color values mapped to feature lifecycle statuses. */
 export const FeatureStatusColors: Record<FeatureStatus, string> = {
   backlog: '#6b7280',
   in_progress: '#f59e0b',
   completed: '#22c55e',
 };
 
-/** Human-readable labels for feature statuses */
+/** Human-readable display labels for feature statuses. */
 export const FeatureStatusLabels: Record<FeatureStatus, string> = {
   backlog: 'Backlog',
   in_progress: 'In Progress',

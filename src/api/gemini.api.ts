@@ -4,54 +4,32 @@ import type {
   TechStack,
 } from '../models';
 
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-
+/** Configuration options for the Gemini API client. */
 export interface GeminiConfig {
   apiKey?: string;
   model?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Transform raw dump → structured standup + Singlish pitch
-// ---------------------------------------------------------------------------
-
+/** Payload sent to transform a raw standup dump. */
 export interface TransformDumpRequest {
-  /** User's unstructured evening brain dump */
   rawDump: string;
-  /** Project name for context */
   projectName: string;
-  /** Project's categorised tech stack for accurate terminology */
   techStack: TechStack;
-  /** Current feature list so AI understands what the user is working on */
   features: ProjectFeature[];
-  /** Optional user name for personalised Singlish script */
   userName?: string;
 }
 
+/** Structured bullets and speaking script returned from transformation. */
 export interface TransformDumpResponse {
-  /** Structured standup bullets (Done / Doing / Blockers) */
   structured: StandupStructure;
-  /** Natural, respectful Singlish speaking script for morning DSM */
   singlishPitch: string;
 }
 
-/**
- * Placeholder: transforms a raw evening dump into structured standup bullets
- * and a Singlish speaking script using the Gemini API.
- *
- * In production this will call the Gemini REST endpoint with a system prompt
- * that instructs the model to:
- *   1. Parse the raw dump into Done / Doing / Blockers bullets.
- *   2. Generate a natural, respectful Singlish talking script for morning DSM.
- *   3. Use the project context (tech stack, features) for accurate terminology.
- */
+/** Transforms a raw standup dump into structured bullets and a Singlish pitch. */
 export async function transformRawDump(
   request: TransformDumpRequest,
   _config?: GeminiConfig
 ): Promise<TransformDumpResponse> {
-  // Placeholder — returns mock data so the app is testable before Gemini wiring
   const lines = request.rawDump
     .split('\n')
     .map((l) => l.trim())

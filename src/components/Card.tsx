@@ -1,11 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, View, type ViewProps } from 'react-native';
 
+/** Props for the Card container component. */
 export interface CardProps extends ViewProps {
   title?: string;
   children?: React.ReactNode;
 }
 
+/** Styled card container with dark surface background. */
 export function Card({ title, children, style, ...rest }: CardProps) {
   return (
     <View style={[styles.card, style]} {...rest}>

@@ -9,10 +9,7 @@ import {
   getStandupLogsByProject,
 } from '../services/logs.service';
 
-// ---------------------------------------------------------------------------
-// useProjects
-// ---------------------------------------------------------------------------
-
+/** Hook for fetching and refreshing all projects. */
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,10 +35,7 @@ export function useProjects() {
   return { projects, loading, error, refresh };
 }
 
-// ---------------------------------------------------------------------------
-// useProject (single)
-// ---------------------------------------------------------------------------
-
+/** Hook for fetching and refreshing a single project by ID. */
 export function useProject(id: string) {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,10 +61,7 @@ export function useProject(id: string) {
   return { project, loading, error, refresh };
 }
 
-// ---------------------------------------------------------------------------
-// useStandupLogs
-// ---------------------------------------------------------------------------
-
+/** Hook for fetching and refreshing standup logs, optionally filtered by project. */
 export function useStandupLogs(projectId?: string) {
   const [logs, setLogs] = useState<StandupLog[]>([]);
   const [loading, setLoading] = useState(true);

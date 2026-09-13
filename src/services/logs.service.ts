@@ -6,11 +6,6 @@ import type {
 import { generateId, isToday } from '../utils';
 import { getItem, setItem, STORAGE_KEYS } from './storage';
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-/** Empty standup structure used for phase-1 (raw dump only) saves. */
 const EMPTY_STRUCTURE: StandupStructure = {
   done: [],
   doing: [],
@@ -25,13 +20,7 @@ async function writeLogs(logs: StandupLog[]): Promise<boolean> {
   return setItem(STORAGE_KEYS.STANDUP_LOGS, logs);
 }
 
-// ---------------------------------------------------------------------------
-// Public CRUD API
-// ---------------------------------------------------------------------------
-
-/**
- * Returns all standup logs sorted by `createdAt` descending.
- */
+/** Fetches all standup logs sorted by creation date descending. */
 export async function getStandupLogs(): Promise<StandupLog[]> {
   const logs = await readLogs();
   return logs.sort(
@@ -40,9 +29,7 @@ export async function getStandupLogs(): Promise<StandupLog[]> {
   );
 }
 
-/**
- * Find a single standup log by ID.
- */
+/** Finds a single standup log by ID. */
 export async function getStandupLogById(
   id: string
 ): Promise<StandupLog | null> {
@@ -50,9 +37,7 @@ export async function getStandupLogById(
   return logs.find((l) => l.id === id) ?? null;
 }
 
-/**
- * Returns all standup logs for a given project, sorted by `createdAt` desc.
- */
+/** Fetches all standup logs belonging to a specific project. */
 export async function getStandupLogsByProject(
   projectId: string
 ): Promise<StandupLog[]> {
@@ -65,10 +50,7 @@ export async function getStandupLogsByProject(
     );
 }
 
-/**
- * Returns today's standup log for a project, if one exists.
- * Enforces the one-log-per-project-per-day constraint.
- */
+/** Finds today's standup log for a given project if it exists. */
 export async function getTodaysLog(
   projectId: string
 ): Promise<StandupLog | null> {
@@ -78,18 +60,12 @@ export async function getTodaysLog(
   );
 }
 
-/**
- * Phase 1 — persist raw dump immediately with empty structured/singlishPitch.
- *
- * Enforces one-log-per-project-per-day: if a log already exists for this
- * project today, returns `null` (caller should use `updateStandupLog` instead).
- */
+/** Persists a raw standup dump, enforcing one log per project per day. */
 export async function createStandupLog(
   input: CreateStandupLogInput
 ): Promise<StandupLog | null> {
   const existing = await getTodaysLog(input.projectId);
   if (existing) {
-    // One log per project per day — caller should update the existing log
     return null;
   }
 
@@ -108,10 +84,7 @@ export async function createStandupLog(
   return newLog;
 }
 
-/**
- * Phase 2 — update a standup log with AI-generated structured output
- * and Singlish pitch, or edit the raw dump.
- */
+/** Updates an existing standup log with AI results or manual edits. */
 export async function updateStandupLog(
   id: string,
   updates: Partial<Omit<StandupLog, 'id' | 'createdAt'>>
@@ -128,9 +101,7 @@ export async function updateStandupLog(
   return logs[index];
 }
 
-/**
- * Delete a standup log by ID.
- */
+/** Deletes a standup log by ID. */
 export async function deleteStandupLog(id: string): Promise<boolean> {
   const logs = await readLogs();
   const filtered = logs.filter((l) => l.id !== id);

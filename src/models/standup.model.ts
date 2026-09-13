@@ -1,25 +1,22 @@
-/** Structured standup output from AI transformation */
+/** Structured standup bullets parsed by AI. */
 export interface StandupStructure {
   done: string[];
   doing: string[];
   blockers: string[];
 }
 
-/** Input type for creating a new standup log (phase 1 — raw dump only) */
+/** Payload for creating a new standup log entry. */
 export interface CreateStandupLogInput {
   projectId: string;
   rawDump: string;
 }
 
-/** A single standup log entry tied to a project */
+/** Daily standup log record associated with a project. */
 export interface StandupLog {
   id: string;
   projectId: string;
-  /** User's unstructured evening brain dump */
   rawDump: string;
-  /** AI-generated structured bullets (empty until phase 2) */
   structured: StandupStructure;
-  /** AI-generated Singlish speaking script (empty until phase 2) */
   singlishPitch: string;
   createdAt: string;
 }

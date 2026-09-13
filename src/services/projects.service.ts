@@ -7,10 +7,6 @@ import type {
 import { generateId } from '../utils';
 import { getItem, setItem, STORAGE_KEYS } from './storage';
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
 async function readProjects(): Promise<Project[]> {
   return (await getItem<Project[]>(STORAGE_KEYS.PROJECTS)) ?? [];
 }
@@ -19,13 +15,7 @@ async function writeProjects(projects: Project[]): Promise<boolean> {
   return setItem(STORAGE_KEYS.PROJECTS, projects);
 }
 
-// ---------------------------------------------------------------------------
-// Public CRUD API
-// ---------------------------------------------------------------------------
-
-/**
- * Returns all projects sorted by `updatedAt` descending (most recent first).
- */
+/** Fetches all projects sorted by most recently updated. */
 export async function getProjects(): Promise<Project[]> {
   const projects = await readProjects();
   return projects.sort(
@@ -33,17 +23,13 @@ export async function getProjects(): Promise<Project[]> {
   );
 }
 
-/**
- * Find a single project by its ID.
- */
+/** Finds a project by its unique ID. */
 export async function getProjectById(id: string): Promise<Project | null> {
   const projects = await readProjects();
   return projects.find((p) => p.id === id) ?? null;
 }
 
-/**
- * Create a new project with auto-generated ID and timestamps.
- */
+/** Saves a new project record into AsyncStorage. */
 export async function createProject(
   input: CreateProjectInput
 ): Promise<Project> {
@@ -66,10 +52,7 @@ export async function createProject(
   return newProject;
 }
 
-/**
- * Partially update a project. Bumps `updatedAt`.
- * Returns the updated project, or `null` if not found.
- */
+/** Updates an existing project record and refreshes its timestamp. */
 export async function updateProject(
   id: string,
   input: UpdateProjectInput
@@ -91,9 +74,7 @@ export async function updateProject(
   return updated;
 }
 
-/**
- * Delete a project by ID. Returns `true` on success.
- */
+/** Deletes a project by its unique ID. */
 export async function deleteProject(id: string): Promise<boolean> {
   const projects = await readProjects();
   const filtered = projects.filter((p) => p.id !== id);
@@ -101,13 +82,7 @@ export async function deleteProject(id: string): Promise<boolean> {
   return writeProjects(filtered);
 }
 
-// ---------------------------------------------------------------------------
-// Feature management
-// ---------------------------------------------------------------------------
-
-/**
- * Add a feature to a project. Auto-generates feature ID.
- */
+/** Appends a new feature to a project. */
 export async function addFeature(
   projectId: string,
   feature: Omit<ProjectFeature, 'id'>
@@ -127,9 +102,7 @@ export async function addFeature(
   return projects[index];
 }
 
-/**
- * Partially update a feature within a project.
- */
+/** Updates an existing feature inside a project. */
 export async function updateFeature(
   projectId: string,
   featureId: string,
@@ -153,9 +126,7 @@ export async function updateFeature(
   return projects[pIndex];
 }
 
-/**
- * Remove a feature from a project by feature ID.
- */
+/** Removes a feature from a project by ID. */
 export async function removeFeature(
   projectId: string,
   featureId: string
