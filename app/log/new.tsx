@@ -13,8 +13,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useProjects } from '../../src/hooks';
-import { createStandupLog } from '../../src/services/logs.service';
+import { createStandupLog, updateStandupLog } from '../../src/services/logs.service';
 import { validateStandupDump } from '../../src/validation';
+import { generateStandup } from '../../src/api/gemini.api';
 
 export default function NewLogScreen() {
   const router = useRouter();
@@ -23,7 +24,8 @@ export default function NewLogScreen() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [rawDump, setRawDump] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState<string>('');
   const [isInputFocused, setIsInputFocused] = useState(false);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export default function NewLogScreen() {
   const charCount = rawDump.trim().length;
   const isLengthValid = charCount >= 10;
 
-  const handleSaveDump = async () => {
+  const handleGenerateAndSave = async () => {
     if (!selectedProjectId) {
       setErrorMessage('Please select a project before saving.');
       return;
@@ -49,10 +51,14 @@ export default function NewLogScreen() {
       return;
     }
 
-    try {
-      setIsSaving(true);
-      setErrorMessage(null);
+    const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
+    try {
+      setIsProcessing(true);
+      setErrorMessage(null);
+      setProcessingStatus('Saving raw dump...');
+
+      // Phase 1: Persist raw dump locally first so user never loses work
       const newLog = await createStandupLog({
         projectId: selectedProjectId,
         rawDump: rawDump.trim(),
@@ -62,16 +68,42 @@ export default function NewLogScreen() {
         setErrorMessage(
           'A standup log already exists for this project today. Each project allows one daily log.'
         );
-        setIsSaving(false);
+        setIsProcessing(false);
+        setProcessingStatus('');
         return;
       }
 
+      // Phase 2: Call Gemini API to generate structured bullets and Singlish script
+      setProcessingStatus('Transforming with Gemini AI...');
+
+      try {
+        const aiResponse = await generateStandup(rawDump.trim(), {
+          name: selectedProject?.name || '',
+          techStack: selectedProject?.techStack,
+          features: selectedProject?.features,
+        });
+
+        // Update log with AI output
+        await updateStandupLog(newLog.id, {
+          structured: aiResponse.structured,
+          singlishPitch: aiResponse.singlishPitch,
+        });
+      } catch (aiErr) {
+        console.warn(
+          'Gemini transformation warning (raw dump was saved):',
+          aiErr
+        );
+        // Raw dump is already safely saved in Phase 1, so we still proceed
+      }
+
+      // Return to Today dashboard to view the generated standup
       router.replace('/(tabs)');
     } catch (err) {
       setErrorMessage(
         err instanceof Error ? err.message : 'Failed to save standup log.'
       );
-      setIsSaving(false);
+      setIsProcessing(false);
+      setProcessingStatus('');
     }
   };
 
@@ -89,6 +121,7 @@ export default function NewLogScreen() {
               pressed && styles.buttonPressed,
             ]}
             onPress={() => router.back()}
+            disabled={isProcessing}
             hitSlop={12}
           >
             <Text style={styles.backButtonIcon}>‹</Text>
@@ -161,6 +194,7 @@ export default function NewLogScreen() {
                         setSelectedProjectId(project.id);
                         if (errorMessage) setErrorMessage(null);
                       }}
+                      disabled={isProcessing}
                     >
                       <Text
                         style={[
@@ -212,27 +246,34 @@ export default function NewLogScreen() {
                 }}
                 onFocus={() => setIsInputFocused(true)}
                 onBlur={() => setIsInputFocused(false)}
-                editable={!isSaving}
+                editable={!isProcessing}
               />
             </View>
           </View>
 
-          {/* Action Button */}
+          {/* Action Button with Loading Indicator */}
           <View style={styles.actionContainer}>
             <Pressable
               style={({ pressed }) => [
                 styles.saveButton,
-                (!isLengthValid || !selectedProjectId || isSaving) &&
+                (!isLengthValid || !selectedProjectId || isProcessing) &&
                   styles.saveButtonDisabled,
-                pressed && isLengthValid && styles.buttonPressed,
+                pressed && isLengthValid && !isProcessing && styles.buttonPressed,
               ]}
-              onPress={handleSaveDump}
-              disabled={!isLengthValid || !selectedProjectId || isSaving}
+              onPress={handleGenerateAndSave}
+              disabled={!isLengthValid || !selectedProjectId || isProcessing}
             >
-              {isSaving ? (
-                <ActivityIndicator size="small" color="#09090b" />
+              {isProcessing ? (
+                <View style={styles.buttonProcessingRow}>
+                  <ActivityIndicator size="small" color="#09090b" />
+                  <Text style={styles.saveButtonText}>
+                    {processingStatus || 'Processing...'}
+                  </Text>
+                </View>
               ) : (
-                <Text style={styles.saveButtonText}>Save DevLog</Text>
+                <Text style={styles.saveButtonText}>
+                  Generate Standup with Gemini ✨
+                </Text>
               )}
             </Pressable>
           </View>
@@ -424,12 +465,17 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: '#fafafa',
     borderRadius: 8,
-    paddingVertical: 13,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   saveButtonDisabled: {
     opacity: 0.35,
+  },
+  buttonProcessingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   saveButtonText: {
     color: '#09090b',
