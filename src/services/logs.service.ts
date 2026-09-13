@@ -1,46 +1,139 @@
-export interface DevLogItem {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: string;
-  tags?: string[];
+import type {
+  CreateStandupLogInput,
+  StandupLog,
+  StandupStructure,
+} from '../models';
+import { generateId, isToday } from '../utils';
+import { getItem, setItem, STORAGE_KEYS } from './storage';
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/** Empty standup structure used for phase-1 (raw dump only) saves. */
+const EMPTY_STRUCTURE: StandupStructure = {
+  done: [],
+  doing: [],
+  blockers: [],
+};
+
+async function readLogs(): Promise<StandupLog[]> {
+  return (await getItem<StandupLog[]>(STORAGE_KEYS.STANDUP_LOGS)) ?? [];
+}
+
+async function writeLogs(logs: StandupLog[]): Promise<boolean> {
+  return setItem(STORAGE_KEYS.STANDUP_LOGS, logs);
+}
+
+// ---------------------------------------------------------------------------
+// Public CRUD API
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns all standup logs sorted by `createdAt` descending.
+ */
+export async function getStandupLogs(): Promise<StandupLog[]> {
+  const logs = await readLogs();
+  return logs.sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 }
 
 /**
- * Placeholder service for retrieving dev logs from persistent storage.
+ * Find a single standup log by ID.
  */
-export async function getLogs(): Promise<DevLogItem[]> {
-  // Placeholder for AsyncStorage / persistent storage retrieval
-  return [];
+export async function getStandupLogById(
+  id: string
+): Promise<StandupLog | null> {
+  const logs = await readLogs();
+  return logs.find((l) => l.id === id) ?? null;
 }
 
 /**
- * Placeholder service for retrieving a single dev log by ID.
+ * Returns all standup logs for a given project, sorted by `createdAt` desc.
  */
-export async function getLogById(id: string): Promise<DevLogItem | null> {
-  // Placeholder for retrieving a single log item
-  return null;
+export async function getStandupLogsByProject(
+  projectId: string
+): Promise<StandupLog[]> {
+  const logs = await readLogs();
+  return logs
+    .filter((l) => l.projectId === projectId)
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 }
 
 /**
- * Placeholder service for creating and saving a dev log.
+ * Returns today's standup log for a project, if one exists.
+ * Enforces the one-log-per-project-per-day constraint.
  */
-export async function createLog(
-  log: Omit<DevLogItem, 'id' | 'createdAt'>
-): Promise<DevLogItem> {
-  // Placeholder for storage save
-  const newLog: DevLogItem = {
-    id: Date.now().toString(),
+export async function getTodaysLog(
+  projectId: string
+): Promise<StandupLog | null> {
+  const logs = await readLogs();
+  return (
+    logs.find((l) => l.projectId === projectId && isToday(l.createdAt)) ?? null
+  );
+}
+
+/**
+ * Phase 1 — persist raw dump immediately with empty structured/singlishPitch.
+ *
+ * Enforces one-log-per-project-per-day: if a log already exists for this
+ * project today, returns `null` (caller should use `updateStandupLog` instead).
+ */
+export async function createStandupLog(
+  input: CreateStandupLogInput
+): Promise<StandupLog | null> {
+  const existing = await getTodaysLog(input.projectId);
+  if (existing) {
+    // One log per project per day — caller should update the existing log
+    return null;
+  }
+
+  const newLog: StandupLog = {
+    id: generateId(),
+    projectId: input.projectId,
+    rawDump: input.rawDump,
+    structured: EMPTY_STRUCTURE,
+    singlishPitch: '',
     createdAt: new Date().toISOString(),
-    ...log,
   };
+
+  const logs = await readLogs();
+  logs.push(newLog);
+  await writeLogs(logs);
   return newLog;
 }
 
 /**
- * Placeholder service for deleting a dev log.
+ * Phase 2 — update a standup log with AI-generated structured output
+ * and Singlish pitch, or edit the raw dump.
  */
-export async function deleteLog(id: string): Promise<boolean> {
-  // Placeholder for storage deletion
-  return true;
+export async function updateStandupLog(
+  id: string,
+  updates: Partial<Omit<StandupLog, 'id' | 'createdAt'>>
+): Promise<StandupLog | null> {
+  const logs = await readLogs();
+  const index = logs.findIndex((l) => l.id === id);
+  if (index === -1) return null;
+
+  logs[index] = {
+    ...logs[index],
+    ...updates,
+  };
+  await writeLogs(logs);
+  return logs[index];
+}
+
+/**
+ * Delete a standup log by ID.
+ */
+export async function deleteStandupLog(id: string): Promise<boolean> {
+  const logs = await readLogs();
+  const filtered = logs.filter((l) => l.id !== id);
+  if (filtered.length === logs.length) return false;
+  return writeLogs(filtered);
 }
