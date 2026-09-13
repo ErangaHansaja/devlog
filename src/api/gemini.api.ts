@@ -13,6 +13,7 @@ export interface GeminiConfig {
 /** Project context metadata to improve Gemini standup accuracy. */
 export interface ProjectContext {
   name: string;
+  description?: string;
   techStack?: TechStack;
   features?: ProjectFeature[];
 }
@@ -21,6 +22,7 @@ export interface ProjectContext {
 export interface TransformDumpRequest {
   rawDump: string;
   projectName?: string;
+  projectDescription?: string;
   techStack?: TechStack;
   features?: ProjectFeature[];
   projectContext?: ProjectContext;
@@ -105,6 +107,9 @@ export async function generateStandup(
   let contextDetails = '';
   if (projectContext?.name) {
     contextDetails += `Project Name: ${projectContext.name}\n`;
+  }
+  if (projectContext?.description) {
+    contextDetails += `Project Description: ${projectContext.description}\n`;
   }
   if (projectContext?.techStack) {
     const ts = projectContext.techStack;
@@ -206,6 +211,7 @@ export async function transformRawDump(
 ): Promise<TransformDumpResponse> {
   const context: ProjectContext | undefined = request.projectContext || {
     name: request.projectName || '',
+    description: request.projectDescription,
     techStack: request.techStack,
     features: request.features,
   };

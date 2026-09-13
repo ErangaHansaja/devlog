@@ -1,11 +1,18 @@
 import type {
   CreateProjectInput,
+  FeatureStatus,
   Project,
   ProjectFeature,
   UpdateProjectInput,
 } from '../models';
 import { generateId } from '../utils';
 import { getItem, setItem, STORAGE_KEYS } from './storage';
+
+const NEXT_STATUS: Record<FeatureStatus, FeatureStatus> = {
+  backlog: 'in_progress',
+  in_progress: 'completed',
+  completed: 'backlog',
+};
 
 async function readProjects(): Promise<Project[]> {
   return (await getItem<Project[]>(STORAGE_KEYS.PROJECTS)) ?? [];
@@ -37,6 +44,7 @@ export async function createProject(
   const newProject: Project = {
     id: generateId(),
     name: input.name.trim(),
+    description: input.description?.trim() || undefined,
     techStack: input.techStack ?? {},
     features: (input.features ?? []).map((f) => ({
       ...f,
@@ -65,6 +73,9 @@ export async function updateProject(
   const updated: Project = {
     ...existing,
     ...(input.name !== undefined && { name: input.name.trim() }),
+    ...(input.description !== undefined && {
+      description: input.description.trim() || undefined,
+    }),
     ...(input.techStack !== undefined && { techStack: input.techStack }),
     updatedAt: new Date().toISOString(),
   };
@@ -121,6 +132,27 @@ export async function updateFeature(
     ...projects[pIndex].features[fIndex],
     ...updates,
   };
+  projects[pIndex].updatedAt = new Date().toISOString();
+  await writeProjects(projects);
+  return projects[pIndex];
+}
+
+/** Cycles a feature's status through backlog -> in_progress -> completed. */
+export async function toggleFeatureStatus(
+  projectId: string,
+  featureId: string
+): Promise<Project | null> {
+  const projects = await readProjects();
+  const pIndex = projects.findIndex((p) => p.id === projectId);
+  if (pIndex === -1) return null;
+
+  const fIndex = projects[pIndex].features.findIndex(
+    (f) => f.id === featureId
+  );
+  if (fIndex === -1) return null;
+
+  const current = projects[pIndex].features[fIndex].status;
+  projects[pIndex].features[fIndex].status = NEXT_STATUS[current] || 'backlog';
   projects[pIndex].updatedAt = new Date().toISOString();
   await writeProjects(projects);
   return projects[pIndex];

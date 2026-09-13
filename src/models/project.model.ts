@@ -20,6 +20,7 @@ export interface TechStack {
 /** Payload for creating a new project. */
 export interface CreateProjectInput {
   name: string;
+  description?: string;
   techStack?: TechStack;
   features?: Omit<ProjectFeature, 'id'>[];
 }
@@ -27,6 +28,7 @@ export interface CreateProjectInput {
 /** Payload for updating an existing project. */
 export interface UpdateProjectInput {
   name?: string;
+  description?: string;
   techStack?: TechStack;
 }
 
@@ -34,6 +36,7 @@ export interface UpdateProjectInput {
 export interface Project {
   id: string;
   name: string;
+  description?: string;
   techStack: TechStack;
   features: ProjectFeature[];
   createdAt: string;

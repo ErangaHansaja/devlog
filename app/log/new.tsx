@@ -79,6 +79,7 @@ export default function NewLogScreen() {
       try {
         const aiResponse = await generateStandup(rawDump.trim(), {
           name: selectedProject?.name || '',
+          description: selectedProject?.description,
           techStack: selectedProject?.techStack,
           features: selectedProject?.features,
         });

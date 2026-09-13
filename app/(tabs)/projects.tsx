@@ -26,6 +26,7 @@ import {
   addFeature,
   createProject,
   removeFeature,
+  toggleFeatureStatus,
   updateFeature,
 } from '../../src/services/projects.service';
 import { formatRelativeTime } from '../../src/utils';
@@ -41,6 +42,7 @@ export default function ProjectsScreen() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [projectName, setProjectName] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
   const [frontendText, setFrontendText] = useState('');
   const [backendText, setBackendText] = useState('');
   const [mobileText, setMobileText] = useState('');
@@ -66,6 +68,7 @@ export default function ProjectsScreen() {
 
   const resetProjectForm = () => {
     setProjectName('');
+    setProjectDescription('');
     setFrontendText('');
     setBackendText('');
     setMobileText('');
@@ -130,6 +133,7 @@ export default function ProjectsScreen() {
 
       const input: CreateProjectInput = {
         name: projectName.trim(),
+        description: projectDescription.trim() || undefined,
         techStack,
       };
 
@@ -193,11 +197,8 @@ export default function ProjectsScreen() {
     projectId: string,
     feature: ProjectFeature
   ) => {
-    const currentIndex = STATUS_CYCLE.indexOf(feature.status);
-    const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
-
     try {
-      await updateFeature(projectId, feature.id, { status: nextStatus });
+      await toggleFeatureStatus(projectId, feature.id);
       await refresh();
     } catch (err) {
       console.error('Failed to cycle feature status:', err);
@@ -261,6 +262,11 @@ export default function ProjectsScreen() {
           <View style={styles.cardHeaderTop}>
             <View style={styles.cardTitleContainer}>
               <Text style={styles.projectName}>{item.name}</Text>
+              {item.description ? (
+                <Text style={styles.projectCardDescription} numberOfLines={2}>
+                  {item.description}
+                </Text>
+              ) : null}
               <Text style={styles.cardTimestamp}>
                 Updated {formatRelativeTime(item.updatedAt)}
               </Text>
@@ -650,6 +656,22 @@ export default function ProjectsScreen() {
                   />
                 </View>
 
+                {/* Project Description */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Project Description</Text>
+                  <TextInput
+                    style={[styles.textInput, styles.textAreaInput]}
+                    placeholder="e.g. Hospitality staff scheduling and fresh inventory management app"
+                    placeholderTextColor="#52525b"
+                    value={projectDescription}
+                    onChangeText={setProjectDescription}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                    editable={!isSaving}
+                  />
+                </View>
+
                 {/* Frontend */}
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Frontend Technologies</Text>
@@ -865,6 +887,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fafafa',
     letterSpacing: -0.2,
+  },
+  projectCardDescription: {
+    fontSize: 13,
+    color: '#a1a1aa',
+    marginTop: 3,
+    lineHeight: 18,
   },
   cardTimestamp: {
     fontSize: 12,
@@ -1292,6 +1320,10 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     color: '#fafafa',
     fontSize: 14,
+  },
+  textAreaInput: {
+    minHeight: 70,
+    paddingTop: 10,
   },
   chipSuggestions: {
     flexDirection: 'row',

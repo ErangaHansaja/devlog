@@ -66,6 +66,7 @@ export default function LogDetailScreen() {
       const projectContext = project
         ? {
             name: project.name,
+            description: project.description,
             techStack: project.techStack,
             features: project.features,
           }
