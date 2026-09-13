@@ -9,18 +9,18 @@ export default function TabLayout() {
         },
         headerTintColor: '#ffffff',
         tabBarStyle: {
-          backgroundColor: '#121212',
-          borderTopColor: '#27272a',
+          backgroundColor: '#0f172a',
+          borderTopColor: '#1e293b',
         },
         tabBarActiveTintColor: '#38bdf8',
-        tabBarInactiveTintColor: '#a1a1aa',
+        tabBarInactiveTintColor: '#94a3b8',
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Standup',
-          headerTitle: 'Today / Standup',
+          headerShown: false,
         }}
       />
       <Tabs.Screen
