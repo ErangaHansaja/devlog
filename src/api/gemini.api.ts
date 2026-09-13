@@ -99,7 +99,7 @@ export async function generateStandup(
 
   if (!apiKey) {
     throw new Error(
-      'Gemini API key is not configured. Please ensure EXPO_PUBLIC_GEMINI_API_KEY is set in your .env file and restart Metro with "npx expo start -c".'
+      'Gemini API key is not configured.'
     );
   }
 
