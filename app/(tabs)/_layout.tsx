@@ -27,7 +27,7 @@ export default function TabLayout() {
         name="projects"
         options={{
           title: 'Projects',
-          headerTitle: 'Projects',
+          headerShown: false,
         }}
       />
       <Tabs.Screen
