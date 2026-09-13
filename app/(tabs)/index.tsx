@@ -181,7 +181,7 @@ export default function StandupScreen() {
                     isCopied && styles.copyButtonTextActive,
                   ]}
                 >
-                  {isCopied ? '✓ Copied' : '📋 Copy'}
+                  {isCopied ? '✓ Copied' : 'Copy'}
                 </Text>
               </Pressable>
             </View>
@@ -211,9 +211,8 @@ export default function StandupScreen() {
       </View>
       <Text style={styles.emptyCardTitle}>No standup logged for today</Text>
       <Text style={styles.emptyCardDescription}>
-        Dump your raw, unfiltered engineering thoughts and blockers before signing
-        off. DevLog turns them into crisp DSM bullets and a natural Singlish
-        script for Ayya.
+        Dump your raw, unfiltered thoughts and blockers before signing off. DevLog
+        turns them into crisp DSM bullets and a natural Singlish script for Ayya.
       </Text>
       <Pressable
         style={({ pressed }) => [
@@ -245,15 +244,14 @@ export default function StandupScreen() {
           ]}
           onPress={() => router.push('/log/new')}
         >
-          <Text style={styles.logDumpButtonIcon}>+</Text>
-          <Text style={styles.logDumpButtonText}>Log Dump</Text>
+          <Text style={styles.logDumpButtonText}>+ Log Dump</Text>
         </Pressable>
       </View>
 
       {/* Body Content */}
       {isLoading && logs.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#38bdf8" />
+          <ActivityIndicator size="large" color="#fafafa" />
           <Text style={styles.loadingText}>Loading standup logs...</Text>
         </View>
       ) : logsError ? (
@@ -265,15 +263,15 @@ export default function StandupScreen() {
         </View>
       ) : (
         <FlatList
-          data={[1]} // Single item list to wrap sectioned content with pull-to-refresh
+          data={[1]}
           keyExtractor={() => 'standup-feed'}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl
               refreshing={isLoading}
               onRefresh={onRefresh}
-              tintColor="#38bdf8"
-              colors={['#38bdf8']}
+              tintColor="#fafafa"
+              colors={['#fafafa']}
             />
           }
           renderItem={() => (
@@ -319,7 +317,7 @@ export default function StandupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#09090b',
   },
   header: {
     flexDirection: 'row',
@@ -329,42 +327,33 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
-    backgroundColor: '#020617',
+    borderBottomColor: '#27272a',
+    backgroundColor: '#09090b',
   },
   headerDate: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#f8fafc',
-    letterSpacing: -0.5,
+    color: '#fafafa',
+    letterSpacing: -0.4,
   },
   headerSubtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: 12,
+    color: '#71717a',
     marginTop: 2,
   },
   logDumpButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#38bdf8',
+    backgroundColor: '#fafafa',
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  logDumpButtonIcon: {
-    color: '#020617',
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 18,
+    borderRadius: 6,
   },
   logDumpButtonText: {
-    color: '#020617',
-    fontSize: 14,
+    color: '#09090b',
+    fontSize: 13,
     fontWeight: '600',
   },
   buttonPressed: {
-    opacity: 0.85,
+    opacity: 0.8,
     transform: [{ scale: 0.98 }],
   },
   scrollContent: {
@@ -377,85 +366,86 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#f8fafc',
-    letterSpacing: -0.3,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fafafa',
+    letterSpacing: -0.2,
   },
   countBadge: {
-    backgroundColor: '#1e293b',
+    backgroundColor: '#18181b',
+    borderWidth: 1,
+    borderColor: '#27272a',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
   },
   countBadgeText: {
-    color: '#94a3b8',
-    fontSize: 12,
+    color: '#71717a',
+    fontSize: 11,
     fontWeight: '500',
   },
   emptyCard: {
-    backgroundColor: '#0f172a',
-    borderRadius: 14,
+    backgroundColor: '#121215',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: '#27272a',
     padding: 24,
     alignItems: 'center',
     gap: 12,
   },
   emptyIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#020617',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#18181b',
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: '#27272a',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
   emptyIconText: {
-    fontSize: 24,
+    fontSize: 22,
   },
   emptyCardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fafafa',
     textAlign: 'center',
   },
   emptyCardDescription: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: '#71717a',
     textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 320,
+    lineHeight: 19,
+    maxWidth: 300,
   },
   emptyActionButton: {
-    backgroundColor: '#38bdf8',
-    paddingHorizontal: 20,
-    paddingVertical: 11,
-    borderRadius: 8,
-    marginTop: 6,
+    backgroundColor: '#fafafa',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 6,
+    marginTop: 4,
   },
   emptyActionButtonText: {
-    color: '#020617',
-    fontSize: 14,
-    fontWeight: '700',
+    color: '#09090b',
+    fontSize: 13,
+    fontWeight: '600',
   },
   logCard: {
-    backgroundColor: '#0f172a',
-    borderRadius: 14,
+    backgroundColor: '#121215',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: '#27272a',
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 10,
     gap: 12,
   },
   logCardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }],
+    backgroundColor: '#18181b',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -463,21 +453,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   projectPill: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    backgroundColor: '#18181b',
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderColor: '#27272a',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   projectPillText: {
-    color: '#38bdf8',
+    color: '#fafafa',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   cardTimestamp: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#71717a',
   },
   bulletsRow: {
     flexDirection: 'row',
@@ -487,24 +477,24 @@ const styles = StyleSheet.create({
   bulletBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 5,
     borderWidth: 1,
     gap: 5,
   },
   doneBadge: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderColor: 'rgba(34, 197, 94, 0.25)',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
   },
   bulletDotDone: {
-    color: '#22c55e',
-    fontSize: 8,
+    color: '#10b981',
+    fontSize: 7,
   },
   doneBadgeText: {
-    color: '#4ade80',
+    color: '#10b981',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   doingBadge: {
     backgroundColor: 'rgba(245, 158, 11, 0.1)',
@@ -512,36 +502,36 @@ const styles = StyleSheet.create({
   },
   bulletDotDoing: {
     color: '#f59e0b',
-    fontSize: 8,
+    fontSize: 7,
   },
   doingBadgeText: {
-    color: '#fbbf24',
+    color: '#f59e0b',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   blockersBadgeActive: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+    borderColor: 'rgba(244, 63, 94, 0.25)',
   },
   bulletDotBlockerActive: {
-    color: '#ef4444',
-    fontSize: 8,
+    color: '#f43f5e',
+    fontSize: 7,
   },
   blockersBadgeTextActive: {
-    color: '#f87171',
+    color: '#f43f5e',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   blockersBadgeMuted: {
-    backgroundColor: 'rgba(100, 116, 139, 0.1)',
-    borderColor: 'rgba(100, 116, 139, 0.2)',
+    backgroundColor: '#18181b',
+    borderColor: '#27272a',
   },
   bulletDotBlockerMuted: {
-    color: '#64748b',
-    fontSize: 8,
+    color: '#52525b',
+    fontSize: 7,
   },
   blockersBadgeTextMuted: {
-    color: '#94a3b8',
+    color: '#71717a',
     fontSize: 11,
     fontWeight: '500',
   },
@@ -549,23 +539,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   draftBadge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: '#18181b',
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: '#27272a',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   draftBadgeText: {
-    color: '#fbbf24',
+    color: '#f59e0b',
     fontSize: 11,
     fontWeight: '500',
   },
   pitchBox: {
-    backgroundColor: '#020617',
+    backgroundColor: '#18181b',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: '#27272a',
     padding: 12,
     gap: 6,
   },
@@ -576,58 +566,58 @@ const styles = StyleSheet.create({
   },
   pitchHeaderTitle: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#94a3b8',
+    fontWeight: '500',
+    color: '#71717a',
   },
   copyButton: {
-    backgroundColor: '#1e293b',
+    backgroundColor: '#121215',
+    borderWidth: 1,
+    borderColor: '#27272a',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,
   },
   copyButtonActive: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.4)',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
   copyButtonText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#38bdf8',
+    fontWeight: '500',
+    color: '#fafafa',
   },
   copyButtonTextActive: {
-    color: '#4ade80',
+    color: '#10b981',
   },
   pitchText: {
     fontSize: 13,
-    color: '#e2e8f0',
+    color: '#e4e4e7',
     lineHeight: 18,
-    fontStyle: 'italic',
   },
   rawPreviewBox: {
-    backgroundColor: '#020617',
+    backgroundColor: '#18181b',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: '#27272a',
     padding: 12,
     gap: 4,
   },
   rawPreviewLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#64748b',
+    color: '#52525b',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   rawPreviewText: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: '#71717a',
     lineHeight: 18,
   },
   tapToTransformText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#38bdf8',
+    fontWeight: '500',
+    color: '#fafafa',
     marginTop: 4,
   },
   pastSection: {
@@ -641,23 +631,25 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    color: '#94a3b8',
+    color: '#71717a',
     fontSize: 14,
   },
   errorText: {
-    color: '#f87171',
+    color: '#fb7185',
     fontSize: 14,
     textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: '#1e293b',
+    backgroundColor: '#18181b',
+    borderWidth: 1,
+    borderColor: '#27272a',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
   retryButtonText: {
-    color: '#38bdf8',
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#fafafa',
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

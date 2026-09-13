@@ -24,8 +24,8 @@ export default function NewLogScreen() {
   const [rawDump, setRawDump] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
-  // Auto-select first project once loaded
   useEffect(() => {
     if (projects.length > 0 && !selectedProjectId) {
       setSelectedProjectId(projects[0].id);
@@ -66,7 +66,6 @@ export default function NewLogScreen() {
         return;
       }
 
-      // Successfully saved Phase 1 dump — return to dashboard
       router.replace('/(tabs)');
     } catch (err) {
       setErrorMessage(
@@ -82,7 +81,7 @@ export default function NewLogScreen() {
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Custom Header with Back Button */}
+        {/* Header */}
         <View style={styles.header}>
           <Pressable
             style={({ pressed }) => [
@@ -109,46 +108,38 @@ export default function NewLogScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Error Banner */}
           {errorMessage ? (
             <View style={styles.errorBanner}>
               <Text style={styles.errorBannerText}>{errorMessage}</Text>
             </View>
           ) : null}
 
-          {/* Project Selector Section */}
+          {/* Project Selector */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>
-              Select Project <Text style={styles.requiredStar}>*</Text>
-            </Text>
+            <Text style={styles.sectionLabel}>Project</Text>
 
             {projectsLoading ? (
               <View style={styles.loadingProjectsRow}>
-                <ActivityIndicator size="small" color="#38bdf8" />
-                <Text style={styles.loadingProjectsText}>
-                  Loading projects...
-                </Text>
+                <ActivityIndicator size="small" color="#fafafa" />
+                <Text style={styles.loadingProjectsText}>Loading projects...</Text>
               </View>
             ) : projects.length === 0 ? (
               <View style={styles.noProjectsWarning}>
-                <Text style={styles.warningIcon}>⚠️</Text>
-                <View style={styles.warningTextContainer}>
-                  <Text style={styles.warningTitle}>No active projects found</Text>
-                  <Text style={styles.warningDescription}>
-                    You need to create a project before logging standup thoughts.
+                <Text style={styles.warningTitle}>No active projects found</Text>
+                <Text style={styles.warningDescription}>
+                  You need to create a project before logging standup thoughts.
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.createProjectLink,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  onPress={() => router.push('/(tabs)/projects')}
+                >
+                  <Text style={styles.createProjectLinkText}>
+                    + Create Project in Projects Tab →
                   </Text>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.createProjectLink,
-                      pressed && styles.buttonPressed,
-                    ]}
-                    onPress={() => router.push('/(tabs)/projects')}
-                  >
-                    <Text style={styles.createProjectLinkText}>
-                      + Create Project in Projects Tab →
-                    </Text>
-                  </Pressable>
-                </View>
+                </Pressable>
               </View>
             ) : (
               <ScrollView
@@ -186,65 +177,47 @@ export default function NewLogScreen() {
             )}
           </View>
 
-          {/* Raw Dump Input Section */}
+          {/* Markdown Text Area */}
           <View style={styles.section}>
             <View style={styles.inputHeaderRow}>
-              <Text style={styles.sectionLabel}>
-                Daily Dump <Text style={styles.requiredStar}>*</Text>
-              </Text>
+              <Text style={styles.sectionLabel}>Engineering Thoughts</Text>
               <Text
                 style={[
                   styles.charCounter,
-                  isLengthValid ? styles.charCounterValid : styles.charCounterWarning,
+                  isLengthValid ? styles.charCounterValid : styles.charCounterMuted,
                 ]}
               >
-                {charCount} / 10 chars min
+                {charCount} / 10 min
               </Text>
             </View>
 
-            <View style={styles.terminalContainer}>
-              <View style={styles.terminalHeaderBar}>
-                <View style={styles.terminalDots}>
-                  <View style={[styles.terminalDot, { backgroundColor: '#ef4444' }]} />
-                  <View style={[styles.terminalDot, { backgroundColor: '#f59e0b' }]} />
-                  <View style={[styles.terminalDot, { backgroundColor: '#22c55e' }]} />
-                </View>
-                <Text style={styles.terminalHeaderTitle}>raw_standup.md</Text>
-              </View>
-
+            <View
+              style={[
+                styles.editorContainer,
+                isInputFocused && styles.editorContainerFocused,
+              ]}
+            >
               <TextInput
-                style={styles.terminalInput}
+                style={styles.editorInput}
                 multiline
-                numberOfLines={8}
+                numberOfLines={10}
                 textAlignVertical="top"
                 autoFocus
-                placeholder="E.g., fixed token refresh bug in interceptor. started writing django filter query for student enrollments. 403 forbidden error on auth headers..."
-                placeholderTextColor="#64748b"
+                placeholder="What did you build, debug, or unblock today? Write freely in markdown or bullet points..."
+                placeholderTextColor="#52525b"
                 value={rawDump}
                 onChangeText={(text) => {
                   setRawDump(text);
                   if (errorMessage) setErrorMessage(null);
                 }}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
                 editable={!isSaving}
               />
             </View>
           </View>
 
-          {/* Prompt Guidelines Card */}
-          <View style={styles.tipsCard}>
-            <Text style={styles.tipsCardTitle}>💡 Tips for a good standup dump</Text>
-            <Text style={styles.tipBullet}>
-              • <Text style={styles.tipBold}>Done:</Text> What did you ship or debug today?
-            </Text>
-            <Text style={styles.tipBullet}>
-              • <Text style={styles.tipBold}>Doing:</Text> What are you picking up next?
-            </Text>
-            <Text style={styles.tipBullet}>
-              • <Text style={styles.tipBold}>Blockers:</Text> PR reviews, broken endpoints, or missing specs?
-            </Text>
-          </View>
-
-          {/* Save Dump CTA Button */}
+          {/* Action Button */}
           <View style={styles.actionContainer}>
             <Pressable
               style={({ pressed }) => [
@@ -257,9 +230,9 @@ export default function NewLogScreen() {
               disabled={!isLengthValid || !selectedProjectId || isSaving}
             >
               {isSaving ? (
-                <ActivityIndicator size="small" color="#020617" />
+                <ActivityIndicator size="small" color="#09090b" />
               ) : (
-                <Text style={styles.saveButtonText}>Save Dump</Text>
+                <Text style={styles.saveButtonText}>Save DevLog</Text>
               )}
             </Pressable>
           </View>
@@ -272,7 +245,7 @@ export default function NewLogScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#09090b',
   },
   keyboardView: {
     flex: 1,
@@ -285,38 +258,38 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
-    backgroundColor: '#020617',
+    borderBottomColor: '#27272a',
+    backgroundColor: '#09090b',
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     borderRadius: 6,
   },
   backButtonIcon: {
-    color: '#38bdf8',
-    fontSize: 28,
-    lineHeight: 28,
+    color: '#a1a1aa',
+    fontSize: 26,
+    lineHeight: 26,
     marginRight: 2,
   },
   backButtonText: {
-    color: '#38bdf8',
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#a1a1aa',
+    fontSize: 15,
+    fontWeight: '500',
   },
   headerTitleCenter: {
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fafafa',
   },
   headerSubtitle: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#71717a',
     marginTop: 1,
   },
   headerRightPlaceholder: {
@@ -326,19 +299,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    gap: 20,
+    padding: 20,
+    gap: 24,
     paddingBottom: 40,
   },
   errorBanner: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(244, 63, 94, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.35)',
+    borderColor: 'rgba(244, 63, 94, 0.3)',
     borderRadius: 8,
     padding: 12,
   },
   errorBannerText: {
-    color: '#f87171',
+    color: '#fb7185',
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '500',
@@ -347,12 +320,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  requiredStar: {
-    color: '#38bdf8',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#fafafa',
+    letterSpacing: -0.2,
   },
   loadingProjectsRow: {
     flexDirection: 'row',
@@ -361,42 +332,34 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   loadingProjectsText: {
-    color: '#94a3b8',
+    color: '#71717a',
     fontSize: 13,
   },
   noProjectsWarning: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: '#121215',
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: '#27272a',
     borderRadius: 10,
     padding: 14,
-    gap: 12,
-  },
-  warningIcon: {
-    fontSize: 20,
-  },
-  warningTextContainer: {
-    flex: 1,
-    gap: 4,
+    gap: 6,
   },
   warningTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#fbbf24',
+    fontWeight: '600',
+    color: '#f59e0b',
   },
   warningDescription: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: '#71717a',
     lineHeight: 18,
   },
   createProjectLink: {
-    marginTop: 6,
+    marginTop: 4,
     alignSelf: 'flex-start',
   },
   createProjectLinkText: {
     fontSize: 13,
-    color: '#38bdf8',
+    color: '#fafafa',
     fontWeight: '600',
   },
   projectPillsRow: {
@@ -407,21 +370,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#121215',
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: '#27272a',
   },
   projectPillSelected: {
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    borderColor: '#38bdf8',
+    backgroundColor: '#27272a',
+    borderColor: '#3f3f46',
   },
   projectPillText: {
-    color: '#94a3b8',
+    color: '#71717a',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   projectPillTextSelected: {
-    color: '#38bdf8',
+    color: '#fafafa',
+    fontWeight: '600',
   },
   inputHeaderRow: {
     flexDirection: 'row',
@@ -433,90 +397,44 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   charCounterValid: {
-    color: '#38bdf8',
+    color: '#10b981',
   },
-  charCounterWarning: {
-    color: '#94a3b8',
+  charCounterMuted: {
+    color: '#71717a',
   },
-  terminalContainer: {
-    backgroundColor: '#0f172a',
+  editorContainer: {
+    backgroundColor: '#18181b',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1e293b',
-    overflow: 'hidden',
+    borderColor: '#27272a',
   },
-  terminalHeaderBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#020617',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+  editorContainerFocused: {
+    borderColor: '#3f3f46',
   },
-  terminalDots: {
-    flexDirection: 'row',
-    gap: 5,
-  },
-  terminalDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-  },
-  terminalHeaderTitle: {
-    color: '#64748b',
-    fontSize: 11,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  terminalInput: {
-    minHeight: 180,
-    color: '#f8fafc',
-    fontSize: 14,
-    lineHeight: 22,
-    padding: 14,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  tipsCard: {
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    padding: 14,
-    gap: 6,
-  },
-  tipsCardTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#f8fafc',
-    marginBottom: 2,
-  },
-  tipBullet: {
-    fontSize: 12,
-    color: '#94a3b8',
-    lineHeight: 18,
-  },
-  tipBold: {
-    color: '#f8fafc',
-    fontWeight: '600',
+  editorInput: {
+    minHeight: 220,
+    color: '#fafafa',
+    fontSize: 15,
+    lineHeight: 24,
+    padding: 16,
   },
   actionContainer: {
-    marginTop: 4,
+    marginTop: 6,
   },
   saveButton: {
-    backgroundColor: '#38bdf8',
+    backgroundColor: '#fafafa',
     borderRadius: 8,
-    paddingVertical: 14,
+    paddingVertical: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
   saveButtonDisabled: {
-    opacity: 0.4,
+    opacity: 0.35,
   },
   saveButtonText: {
-    color: '#020617',
-    fontSize: 15,
-    fontWeight: '700',
+    color: '#09090b',
+    fontSize: 14,
+    fontWeight: '600',
   },
   buttonPressed: {
     opacity: 0.85,

@@ -1,26 +1,42 @@
 import type { FeatureStatus } from '../models';
 
-/** Color palette design tokens for light and dark themes. */
+/** Color palette design tokens for light and dark themes (Linear / Obsidian style). */
 export const Colors = {
   dark: {
-    background: '#121212',
-    surface: '#1e1e1e',
-    card: '#27272a',
-    primary: '#38bdf8',
-    secondary: '#818cf8',
-    text: '#f3f4f6',
-    textMuted: '#9ca3af',
+    background: '#09090b',
+    surface: '#121215',
+    card: '#121215',
+    input: '#18181b',
     border: '#27272a',
+    borderFocus: '#3f3f46',
+    primary: '#fafafa',
+    primaryHover: '#f4f4f5',
+    accent: '#e4e4e7',
+    secondary: '#71717a',
+    text: '#fafafa',
+    textMuted: '#71717a',
+    emerald: '#10b981',
+    violet: '#8b5cf6',
+    amber: '#f59e0b',
+    rose: '#f43f5e',
   },
   light: {
     background: '#ffffff',
-    surface: '#f3f4f6',
+    surface: '#f4f4f5',
     card: '#ffffff',
-    primary: '#0284c7',
-    secondary: '#6366f1',
-    text: '#111827',
-    textMuted: '#6b7280',
-    border: '#e5e7eb',
+    input: '#f4f4f5',
+    border: '#e4e4e7',
+    borderFocus: '#a1a1aa',
+    primary: '#18181b',
+    primaryHover: '#27272a',
+    accent: '#27272a',
+    secondary: '#71717a',
+    text: '#09090b',
+    textMuted: '#71717a',
+    emerald: '#059669',
+    violet: '#7c3aed',
+    amber: '#d97706',
+    rose: '#e11d48',
   },
 } as const;
 
@@ -29,9 +45,9 @@ export type ThemeColors = typeof Colors.dark;
 
 /** Color values mapped to feature lifecycle statuses. */
 export const FeatureStatusColors: Record<FeatureStatus, string> = {
-  backlog: '#6b7280',
+  backlog: '#71717a',
   in_progress: '#f59e0b',
-  completed: '#22c55e',
+  completed: '#10b981',
 };
 
 /** Human-readable display labels for feature statuses. */
