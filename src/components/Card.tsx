@@ -1,11 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, View, type ViewProps } from 'react-native';
 
+/** Props for the Card container component. */
 export interface CardProps extends ViewProps {
   title?: string;
   children?: React.ReactNode;
 }
 
+/** Styled card container with dark surface background. */
 export function Card({ title, children, style, ...rest }: CardProps) {
   return (
     <View style={[styles.card, style]} {...rest}>
@@ -17,13 +19,15 @@ export function Card({ title, children, style, ...rest }: CardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#121215',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#27272a',
     padding: 16,
     marginVertical: 8,
   },
   title: {
-    color: '#ffffff',
+    color: '#fafafa',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,

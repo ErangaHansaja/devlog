@@ -1,7 +1,7 @@
-/** Feature lifecycle status */
+/** Feature lifecycle status. */
 export type FeatureStatus = 'backlog' | 'in_progress' | 'completed';
 
-/** Individual trackable feature within a project */
+/** Individual trackable feature within a project. */
 export interface ProjectFeature {
   id: string;
   name: string;
@@ -9,7 +9,7 @@ export interface ProjectFeature {
   notes?: string;
 }
 
-/** Categorised tech stack metadata for a project */
+/** Categorized tech stack metadata for a project. */
 export interface TechStack {
   frontend?: string[];
   backend?: string[];
@@ -17,23 +17,26 @@ export interface TechStack {
   tools?: string[];
 }
 
-/** Input type for creating a new project */
+/** Payload for creating a new project. */
 export interface CreateProjectInput {
   name: string;
+  description?: string;
   techStack?: TechStack;
   features?: Omit<ProjectFeature, 'id'>[];
 }
 
-/** Input type for updating an existing project */
+/** Payload for updating an existing project. */
 export interface UpdateProjectInput {
   name?: string;
+  description?: string;
   techStack?: TechStack;
 }
 
-/** A tracked private repository / project */
+/** Tracked repository or project record. */
 export interface Project {
   id: string;
   name: string;
+  description?: string;
   techStack: TechStack;
   features: ProjectFeature[];
   createdAt: string;

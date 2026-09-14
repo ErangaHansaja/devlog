@@ -5,29 +5,29 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#121212',
+          backgroundColor: '#09090b',
         },
-        headerTintColor: '#ffffff',
+        headerTintColor: '#fafafa',
         tabBarStyle: {
-          backgroundColor: '#121212',
+          backgroundColor: '#09090b',
           borderTopColor: '#27272a',
         },
-        tabBarActiveTintColor: '#38bdf8',
-        tabBarInactiveTintColor: '#a1a1aa',
+        tabBarActiveTintColor: '#fafafa',
+        tabBarInactiveTintColor: '#71717a',
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Standup',
-          headerTitle: 'Today / Standup',
+          headerShown: false,
         }}
       />
       <Tabs.Screen
         name="projects"
         options={{
           title: 'Projects',
-          headerTitle: 'Projects',
+          headerShown: false,
         }}
       />
       <Tabs.Screen

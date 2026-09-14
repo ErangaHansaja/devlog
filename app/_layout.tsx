@@ -8,14 +8,14 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#121212',
+            backgroundColor: '#09090b',
           },
-          headerTintColor: '#ffffff',
+          headerTintColor: '#fafafa',
           headerTitleStyle: {
             fontWeight: '600',
           },
           contentStyle: {
-            backgroundColor: '#121212',
+            backgroundColor: '#09090b',
           },
         }}
       >
@@ -29,7 +29,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="log/new"
           options={{
-            title: 'New Log',
+            headerShown: false,
           }}
         />
         <Stack.Screen

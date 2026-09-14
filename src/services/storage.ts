@@ -1,9 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ---------------------------------------------------------------------------
-// Storage key constants — namespaced to prevent collisions
-// ---------------------------------------------------------------------------
-
+/** Namespaced AsyncStorage keys used across the app. */
 export const STORAGE_KEYS = {
   PROJECTS: 'devlog:projects',
   STANDUP_LOGS: 'devlog:standup_logs',
@@ -11,17 +8,9 @@ export const STORAGE_KEYS = {
   SCHEMA_VERSION: 'devlog:schema_version',
 } as const;
 
-/** Current schema version. Bump when model shapes change. */
 const CURRENT_SCHEMA_VERSION = 1;
 
-// ---------------------------------------------------------------------------
-// Generic helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Retrieve and parse a JSON value from AsyncStorage.
- * Returns `null` on missing key or parse error.
- */
+/** Retrieves and parses a JSON record from AsyncStorage. */
 export async function getItem<T>(key: string): Promise<T | null> {
   try {
     const raw = await AsyncStorage.getItem(key);
@@ -33,9 +22,7 @@ export async function getItem<T>(key: string): Promise<T | null> {
   }
 }
 
-/**
- * Serialise a value to JSON and persist it in AsyncStorage.
- */
+/** Serializes and saves a record into AsyncStorage. */
 export async function setItem<T>(key: string, value: T): Promise<boolean> {
   try {
     await AsyncStorage.setItem(key, JSON.stringify(value));
@@ -46,9 +33,7 @@ export async function setItem<T>(key: string, value: T): Promise<boolean> {
   }
 }
 
-/**
- * Remove a key from AsyncStorage.
- */
+/** Removes a key from AsyncStorage. */
 export async function removeItem(key: string): Promise<boolean> {
   try {
     await AsyncStorage.removeItem(key);
@@ -59,28 +44,17 @@ export async function removeItem(key: string): Promise<boolean> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Schema versioning
-// ---------------------------------------------------------------------------
-
-/**
- * Ensures the stored schema version matches the current code version.
- * Call once on app boot. When a future version introduces breaking model
- * changes, migration logic will be added here.
- */
+/** Validates and synchronizes the local storage schema version. */
 export async function ensureSchemaVersion(): Promise<void> {
   try {
     const stored = await getItem<number>(STORAGE_KEYS.SCHEMA_VERSION);
 
     if (stored === null) {
-      // First launch — stamp current version
       await setItem(STORAGE_KEYS.SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
       return;
     }
 
     if (stored < CURRENT_SCHEMA_VERSION) {
-      // Future: run migrations sequentially (v1→v2, v2→v3, etc.)
-      // For now, just update the version stamp.
       await setItem(STORAGE_KEYS.SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
     }
   } catch (error) {

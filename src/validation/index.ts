@@ -1,13 +1,12 @@
 import type { TechStack } from '../models';
 
+/** Validation result containing validity status and field errors. */
 export interface ValidationResult {
   isValid: boolean;
   errors?: Record<string, string>;
 }
 
-/**
- * Validates project creation/update input.
- */
+/** Validates project name and tech stack inputs. */
 export function validateProjectInput(
   name: string,
   techStack?: TechStack
@@ -18,7 +17,6 @@ export function validateProjectInput(
     errors.name = 'Project name is required';
   }
 
-  // Ensure tech stack arrays (if provided) don't contain empty strings
   if (techStack) {
     const categories = ['frontend', 'backend', 'mobile', 'tools'] as const;
     for (const cat of categories) {
@@ -35,9 +33,7 @@ export function validateProjectInput(
   };
 }
 
-/**
- * Validates a raw standup dump before saving.
- */
+/** Validates a raw standup dump string. */
 export function validateStandupDump(rawDump: string): ValidationResult {
   const errors: Record<string, string> = {};
 
@@ -54,9 +50,7 @@ export function validateStandupDump(rawDump: string): ValidationResult {
   };
 }
 
-/**
- * Validates a feature name before adding to a project.
- */
+/** Validates a feature name input. */
 export function validateFeatureInput(name: string): ValidationResult {
   const errors: Record<string, string> = {};
 
