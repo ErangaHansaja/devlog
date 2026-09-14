@@ -1,8 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
   ProjectFeature,
   StandupStructure,
   TechStack,
 } from '../models';
+import { STORAGE_KEYS } from '../services/storage';
 
 /** Configuration options for the Gemini API client. */
 export interface GeminiConfig {
@@ -87,21 +89,82 @@ async function callGemini(
   });
 }
 
+export const GEMINI_API_KEY_STORAGE_KEY = STORAGE_KEYS.GEMINI_API_KEY;
+
+/** Resolves the Gemini API key from explicit config, AsyncStorage, or environment. */
+export async function getActiveApiKey(explicitKey?: string): Promise<string> {
+  if (explicitKey && explicitKey.trim()) {
+    return explicitKey.replace(/^["']|["']$/g, '').trim();
+  }
+
+  try {
+    const stored = await AsyncStorage.getItem(GEMINI_API_KEY_STORAGE_KEY);
+    if (stored && stored.trim()) {
+      return stored.replace(/^["']|["']$/g, '').trim();
+    }
+  } catch (err) {
+    console.warn('[gemini] Failed to read API key from AsyncStorage:', err);
+  }
+
+  const envKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+  if (envKey && envKey.trim()) {
+    return envKey.replace(/^["']|["']$/g, '').trim();
+  }
+
+  throw new Error(
+    'Gemini API key is not configured. Please save your API key in Settings or configure EXPO_PUBLIC_GEMINI_API_KEY.'
+  );
+}
+
+/** Lightweight test ping to verify a Gemini API key. */
+export async function testGeminiApiKey(
+  apiKey: string
+): Promise<{ ok: boolean; message: string }> {
+  const sanitized = apiKey.replace(/^["']|["']$/g, '').trim();
+  if (!sanitized) {
+    return { ok: false, message: 'API key cannot be empty.' };
+  }
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${sanitized}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'Ping test. Reply with OK' }] }],
+          generationConfig: { maxOutputTokens: 5 },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => null);
+      const errMsg =
+        errJson?.error?.message ||
+        `HTTP ${response.status}: ${response.statusText}`;
+      return { ok: false, message: errMsg };
+    }
+
+    return { ok: true, message: 'Connection successful (200 OK)' };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error
+          ? err.message
+          : 'Network error connecting to Gemini API',
+    };
+  }
+}
+
 /** Generates structured standup bullets and Singlish pitch via Gemini API. */
 export async function generateStandup(
   rawDump: string,
   projectContext?: ProjectContext,
   config?: GeminiConfig
 ): Promise<TransformDumpResponse> {
-  const rawKey =
-    config?.apiKey || process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
-  const apiKey = rawKey.replace(/^["']|["']$/g, '').trim();
-
-  if (!apiKey) {
-    throw new Error(
-      'Gemini API key is not configured.'
-    );
-  }
+  const apiKey = await getActiveApiKey(config?.apiKey);
 
   // Format context for the prompt
   let contextDetails = '';

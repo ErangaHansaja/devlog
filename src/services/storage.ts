@@ -6,6 +6,7 @@ export const STORAGE_KEYS = {
   STANDUP_LOGS: 'devlog:standup_logs',
   SETTINGS: 'devlog:settings',
   SCHEMA_VERSION: 'devlog:schema_version',
+  GEMINI_API_KEY: '@gemini_api_key',
 } as const;
 
 const CURRENT_SCHEMA_VERSION = 1;

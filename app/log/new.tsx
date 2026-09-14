@@ -266,7 +266,7 @@ export default function NewLogScreen() {
             >
               {isProcessing ? (
                 <View style={styles.buttonProcessingRow}>
-                  <ActivityIndicator size="small" color="#09090b" />
+                  <ActivityIndicator size="small" color="#fafafa" />
                   <Text style={styles.saveButtonText}>
                     {processingStatus || 'Processing...'}
                   </Text>
@@ -464,7 +464,9 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   saveButton: {
-    backgroundColor: '#fafafa',
+    backgroundColor: '#27272a',
+    borderWidth: 1,
+    borderColor: '#3f3f46',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -479,7 +481,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   saveButtonText: {
-    color: '#09090b',
+    color: '#fafafa',
     fontSize: 14,
     fontWeight: '600',
   },
