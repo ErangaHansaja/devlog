@@ -60,33 +60,82 @@ You must respond with ONLY valid JSON adhering strictly to this schema:
 }
 `;
 
-/** Calls Gemini generateContent with given model, with fallback handling. */
+/**
+ * Prioritized list of Gemini endpoints for generateContent:
+ * 1. gemini-2.0-flash on v1beta
+ * 2. gemini-1.5-flash on v1
+ * 3. gemini-3.6-flash on v1beta (active flash fallback)
+ * 4. gemini-2.5-flash on v1beta
+ */
+const CANDIDATE_ENDPOINTS = [
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+  'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent',
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent',
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+];
+
+/** Calls Gemini generateContent across candidate endpoints with automatic fallback. */
 async function callGemini(
-  model: string,
   apiKey: string,
   userPrompt: string
 ): Promise<Response> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-  return fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: userPrompt }],
-        },
-      ],
-      systemInstruction: {
-        parts: [{ text: SYSTEM_PROMPT }],
+  const requestBody = JSON.stringify({
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: userPrompt }],
       },
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.3,
-      },
-    }),
+    ],
+    systemInstruction: {
+      parts: [{ text: SYSTEM_PROMPT }],
+    },
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: 0.3,
+    },
   });
+
+  let lastResponse: Response | null = null;
+
+  for (const endpoint of CANDIDATE_ENDPOINTS) {
+    try {
+      const response = await fetch(`${endpoint}?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody,
+      });
+
+      if (response.ok) {
+        return response;
+      }
+
+      lastResponse = response;
+
+      // If model not found or version mismatch (404), try next candidate
+      if (response.status === 404) {
+        continue;
+      }
+
+      // For other client/auth errors (e.g. 400, 403), return response immediately
+      return response;
+    } catch (err) {
+      if (!lastResponse) {
+        lastResponse = new Response(null, {
+          status: 500,
+          statusText:
+            err instanceof Error ? err.message : 'Network error occurred',
+        });
+      }
+    }
+  }
+
+  return (
+    lastResponse ||
+    new Response(null, {
+      status: 500,
+      statusText: 'All Gemini candidate endpoints failed',
+    })
+  );
 }
 
 export const GEMINI_API_KEY_STORAGE_KEY = STORAGE_KEYS.GEMINI_API_KEY;
@@ -116,7 +165,7 @@ export async function getActiveApiKey(explicitKey?: string): Promise<string> {
   );
 }
 
-/** Lightweight test ping to verify a Gemini API key. */
+/** Lightweight test ping to verify a Gemini API key with candidate fallback. */
 export async function testGeminiApiKey(
   apiKey: string
 ): Promise<{ ok: boolean; message: string }> {
@@ -125,37 +174,47 @@ export async function testGeminiApiKey(
     return { ok: false, message: 'API key cannot be empty.' };
   }
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${sanitized}`,
+  const pingBody = JSON.stringify({
+    contents: [
       {
+        parts: [{ text: 'ping' }],
+      },
+    ],
+  });
+
+  let lastErrorMessage = 'Failed to connect to Gemini API.';
+
+  for (const endpoint of CANDIDATE_ENDPOINTS) {
+    try {
+      const response = await fetch(`${endpoint}?key=${sanitized}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Ping test. Reply with OK' }] }],
-          generationConfig: { maxOutputTokens: 5 },
-        }),
-      }
-    );
+        body: pingBody,
+      });
 
-    if (!response.ok) {
+      if (response.ok) {
+        return { ok: true, message: 'Connection successful (200 OK)' };
+      }
+
+      // If model not found or version mismatch (404), proceed to next candidate fallback
+      if (response.status === 404) {
+        continue;
+      }
+
       const errJson = await response.json().catch(() => null);
-      const errMsg =
+      lastErrorMessage =
         errJson?.error?.message ||
         `HTTP ${response.status}: ${response.statusText}`;
-      return { ok: false, message: errMsg };
-    }
-
-    return { ok: true, message: 'Connection successful (200 OK)' };
-  } catch (err) {
-    return {
-      ok: false,
-      message:
+      return { ok: false, message: lastErrorMessage };
+    } catch (err) {
+      lastErrorMessage =
         err instanceof Error
           ? err.message
-          : 'Network error connecting to Gemini API',
-    };
+          : 'Network error connecting to Gemini API';
+    }
   }
+
+  return { ok: false, message: lastErrorMessage };
 }
 
 /** Generates structured standup bullets and Singlish pitch via Gemini API. */
@@ -196,17 +255,9 @@ export async function generateStandup(
 
   const userPrompt = `${contextDetails ? `Context:\n${contextDetails}\n` : ''}Developer's Raw Work Dump:\n${rawDump.trim()}`;
 
-  const primaryModel = config?.model || 'gemini-1.5-flash';
-  const fallbackModel = 'gemini-3.6-flash';
-
   let response: Response;
   try {
-    response = await callGemini(primaryModel, apiKey, userPrompt);
-
-    // If 1.5-flash is not available for this key/version (e.g. 404), seamlessly fallback
-    if (response.status === 404 && primaryModel !== fallbackModel) {
-      response = await callGemini(fallbackModel, apiKey, userPrompt);
-    }
+    response = await callGemini(apiKey, userPrompt);
   } catch (netErr) {
     throw new Error(
       `Network connection failed while calling Gemini API: ${netErr instanceof Error ? netErr.message : String(netErr)}`
