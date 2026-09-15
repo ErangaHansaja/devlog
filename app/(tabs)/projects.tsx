@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -14,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SwipeableRow } from '../../src/components';
 import { useProjects } from '../../src/hooks';
 import type {
   CreateProjectInput,
@@ -25,10 +27,15 @@ import type {
 import {
   addFeature,
   createProject,
+  deleteProject,
   removeFeature,
   toggleFeatureStatus,
   updateFeature,
 } from '../../src/services/projects.service';
+import {
+  deleteStandupLogsByProject,
+  getStandupLogs,
+} from '../../src/services/logs.service';
 import { formatRelativeTime } from '../../src/utils';
 import { validateProjectInput } from '../../src/validation';
 import { FeatureStatusColors, FeatureStatusLabels } from '../../src/constants';
@@ -214,6 +221,55 @@ export default function ProjectsScreen() {
     }
   };
 
+  const handleDeleteProject = async (project: Project) => {
+    try {
+      const allLogs = await getStandupLogs().catch(() => []);
+      const linkedLogs = allLogs.filter((l) => l.projectId === project.id);
+
+      if (linkedLogs.length > 0) {
+        Alert.alert(
+          'Delete Project & Logs?',
+          `"${project.name}" has ${linkedLogs.length} linked standup ${
+            linkedLogs.length === 1 ? 'log' : 'logs'
+          }. Deleting it will permanently remove the project and all associated standup logs. This cannot be undone.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Delete All',
+              style: 'destructive',
+              onPress: async () => {
+                await deleteStandupLogsByProject(project.id);
+                await deleteProject(project.id);
+                await refresh();
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Delete Project',
+          `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: async () => {
+                await deleteProject(project.id);
+                await refresh();
+              },
+            },
+          ]
+        );
+      }
+    } catch (err) {
+      Alert.alert(
+        'Delete Failed',
+        err instanceof Error ? err.message : 'Could not delete project.'
+      );
+    }
+  };
+
   const renderTechCategory = (label: string, items: string[] | undefined) => {
     if (!items || items.length === 0) return null;
 
@@ -250,7 +306,9 @@ export default function ProjectsScreen() {
       (item.techStack.tools && item.techStack.tools.length > 0);
 
     return (
-      <View style={styles.projectCard}>
+      <SwipeableRow onDelete={() => handleDeleteProject(item)}>
+        <View style={styles.projectCard}>
+
         {/* Clickable Card Header */}
         <Pressable
           style={({ pressed }) => [
@@ -520,7 +578,8 @@ export default function ProjectsScreen() {
             </View>
           </View>
         )}
-      </View>
+        </View>
+      </SwipeableRow>
     );
   };
 

@@ -3,15 +3,23 @@
     "name": "devlog",
     "slug": "devlog",
     "scheme": "devlog",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "androidNavigationBar": {
+      "backgroundColor": "#09090b",
+      "barStyle": "light-content"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.devlog.app",
+      "androidNavigationBar": {
+        "backgroundColor": "#09090b",
+        "barStyle": "light-content"
+      },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -26,6 +34,14 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false,
+          "hidden": false,
+          "style": "light"
+        }
+      ],
       [
         "expo-build-properties",
         {

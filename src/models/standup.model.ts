@@ -9,6 +9,7 @@ export interface StandupStructure {
 export interface CreateStandupLogInput {
   projectId: string;
   rawDump: string;
+  date?: string;
 }
 
 /** Daily standup log record associated with a project. */

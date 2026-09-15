@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,8 +12,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useProjects } from '../../src/hooks';
-import { createStandupLog, updateStandupLog } from '../../src/services/logs.service';
+import type { StandupLog } from '../../src/models';
+import {
+  createStandupLog,
+  getLogByProjectAndDate,
+  updateStandupLog,
+} from '../../src/services/logs.service';
 import { validateStandupDump } from '../../src/validation';
 import { generateStandup } from '../../src/api/gemini.api';
 
@@ -21,6 +27,13 @@ export default function NewLogScreen() {
   const router = useRouter();
   const { projects, loading: projectsLoading } = useProjects();
 
+  const todayIso = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const yesterdayIso = useMemo(
+    () => new Date(Date.now() - 86400000).toISOString().split('T')[0],
+    []
+  );
+
+  const [selectedDate, setSelectedDate] = useState<string>(todayIso);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [rawDump, setRawDump] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -28,11 +41,35 @@ export default function NewLogScreen() {
   const [processingStatus, setProcessingStatus] = useState<string>('');
   const [isInputFocused, setIsInputFocused] = useState(false);
 
+  // Append Mode detection
+  const [existingLog, setExistingLog] = useState<StandupLog | null>(null);
+  const [isCheckingExisting, setIsCheckingExisting] = useState(false);
+
   useEffect(() => {
     if (projects.length > 0 && !selectedProjectId) {
       setSelectedProjectId(projects[0].id);
     }
   }, [projects, selectedProjectId]);
+
+  useEffect(() => {
+    const checkExisting = async () => {
+      if (!selectedProjectId || !selectedDate) {
+        setExistingLog(null);
+        return;
+      }
+      try {
+        setIsCheckingExisting(true);
+        const found = await getLogByProjectAndDate(selectedProjectId, selectedDate);
+        setExistingLog(found);
+      } catch {
+        setExistingLog(null);
+      } finally {
+        setIsCheckingExisting(false);
+      }
+    };
+
+    checkExisting();
+  }, [selectedProjectId, selectedDate]);
 
   const charCount = rawDump.trim().length;
   const isLengthValid = charCount >= 10;
@@ -56,44 +93,42 @@ export default function NewLogScreen() {
     try {
       setIsProcessing(true);
       setErrorMessage(null);
-      setProcessingStatus('Saving raw dump...');
+      setProcessingStatus(
+        existingLog ? 'Appending thoughts...' : 'Saving raw dump...'
+      );
 
-      // Phase 1: Persist raw dump locally first so user never loses work
-      const newLog = await createStandupLog({
+      // Phase 1: Persist raw dump locally (auto-appends if log already exists)
+      const savedLog = await createStandupLog({
         projectId: selectedProjectId,
         rawDump: rawDump.trim(),
+        date: selectedDate,
       });
 
-      if (!newLog) {
-        setErrorMessage(
-          'A standup log already exists for this project today. Each project allows one daily log.'
-        );
+      if (!savedLog) {
+        setErrorMessage('Failed to save log to local storage.');
         setIsProcessing(false);
         setProcessingStatus('');
         return;
       }
 
-      // Phase 2: Call Gemini API to generate structured bullets and Singlish script
-      setProcessingStatus('Transforming with Gemini AI...');
+      // Phase 2: Call AI API to compile structured bullets and Singlish script
+      setProcessingStatus('Compiling standup with AI...');
 
       try {
-        const aiResponse = await generateStandup(rawDump.trim(), {
+        const aiResponse = await generateStandup(savedLog.rawDump, {
           name: selectedProject?.name || '',
           description: selectedProject?.description,
           techStack: selectedProject?.techStack,
           features: selectedProject?.features,
         });
 
-        // Update log with AI output
-        await updateStandupLog(newLog.id, {
+        // Update log with compiled AI output
+        await updateStandupLog(savedLog.id, {
           structured: aiResponse.structured,
           singlishPitch: aiResponse.singlishPitch,
         });
       } catch (aiErr) {
-        console.warn(
-          'Gemini transformation warning (raw dump was saved):',
-          aiErr
-        );
+        console.warn('AI compilation warning (raw dump was saved):', aiErr);
         // Raw dump is already safely saved in Phase 1, so we still proceed
       }
 
@@ -131,7 +166,7 @@ export default function NewLogScreen() {
 
           <View style={styles.headerTitleCenter}>
             <Text style={styles.headerTitle}>New DevLog</Text>
-            <Text style={styles.headerSubtitle}>Evening Standup Dump</Text>
+            <Text style={styles.headerSubtitle}>Daily Standup Dump</Text>
           </View>
 
           <View style={styles.headerRightPlaceholder} />
@@ -147,6 +182,58 @@ export default function NewLogScreen() {
               <Text style={styles.errorBannerText}>{errorMessage}</Text>
             </View>
           ) : null}
+
+          {/* Date Selector Row */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Date</Text>
+            <View style={styles.dateSelectorRow}>
+              <Pressable
+                style={[
+                  styles.datePill,
+                  selectedDate === todayIso && styles.datePillSelected,
+                ]}
+                onPress={() => setSelectedDate(todayIso)}
+                disabled={isProcessing}
+              >
+                <Ionicons
+                  name="calendar-outline"
+                  size={14}
+                  color={selectedDate === todayIso ? '#38bdf8' : '#71717a'}
+                />
+                <Text
+                  style={[
+                    styles.datePillText,
+                    selectedDate === todayIso && styles.datePillTextSelected,
+                  ]}
+                >
+                  Today
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.datePill,
+                  selectedDate === yesterdayIso && styles.datePillSelected,
+                ]}
+                onPress={() => setSelectedDate(yesterdayIso)}
+                disabled={isProcessing}
+              >
+                <Ionicons
+                  name="time-outline"
+                  size={14}
+                  color={selectedDate === yesterdayIso ? '#38bdf8' : '#71717a'}
+                />
+                <Text
+                  style={[
+                    styles.datePillText,
+                    selectedDate === yesterdayIso && styles.datePillTextSelected,
+                  ]}
+                >
+                  Yesterday
+                </Text>
+              </Pressable>
+            </View>
+          </View>
 
           {/* Project Selector */}
           <View style={styles.section}>
@@ -212,10 +299,30 @@ export default function NewLogScreen() {
             )}
           </View>
 
+          {/* Append Mode Banner */}
+          {existingLog ? (
+            <View style={styles.appendBanner}>
+              <View style={styles.appendBannerHeader}>
+                <Ionicons name="git-branch-outline" size={16} color="#38bdf8" />
+                <Text style={styles.appendBannerTitle}>
+                  Append Mode Active
+                </Text>
+              </View>
+              <Text style={styles.appendBannerDescription}>
+                A standup entry already exists for this project on{' '}
+                {selectedDate === todayIso ? 'Today' : selectedDate} (
+                {existingLog.structured.done.length + existingLog.structured.doing.length} bullets).
+                New thoughts will be automatically appended to existing notes and recompiled.
+              </Text>
+            </View>
+          ) : null}
+
           {/* Markdown Text Area */}
           <View style={styles.section}>
             <View style={styles.inputHeaderRow}>
-              <Text style={styles.sectionLabel}>Engineering Thoughts</Text>
+              <Text style={styles.sectionLabel}>
+                {existingLog ? 'Additional Notes / Updates' : 'Engineering Thoughts'}
+              </Text>
               <Text
                 style={[
                   styles.charCounter,
@@ -238,7 +345,11 @@ export default function NewLogScreen() {
                 numberOfLines={10}
                 textAlignVertical="top"
                 autoFocus
-                placeholder="What did you build, debug, or unblock today? Write freely in markdown or bullet points..."
+                placeholder={
+                  existingLog
+                    ? 'Add any additional tickets completed, afternoon progress, or blockers encountered...'
+                    : 'What did you build, debug, or unblock today? Write freely in markdown or bullet points...'
+                }
                 placeholderTextColor="#52525b"
                 value={rawDump}
                 onChangeText={(text) => {
@@ -273,7 +384,9 @@ export default function NewLogScreen() {
                 </View>
               ) : (
                 <Text style={styles.saveButtonText}>
-                  Generate Standup with Gemini ✨
+                  {existingLog
+                    ? 'Append & Recompile Standup ✨'
+                    : 'Compile Standup ✨'}
                 </Text>
               )}
             </Pressable>
@@ -325,13 +438,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
     color: '#fafafa',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   headerSubtitle: {
-    fontSize: 11,
     color: '#71717a',
+    fontSize: 11,
     marginTop: 1,
   },
   headerRightPlaceholder: {
@@ -341,8 +455,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    gap: 24,
+    padding: 16,
+    gap: 16,
     paddingBottom: 40,
   },
   errorBanner: {
@@ -355,17 +469,45 @@ const styles = StyleSheet.create({
   errorBannerText: {
     color: '#fb7185',
     fontSize: 13,
-    lineHeight: 18,
     fontWeight: '500',
   },
   section: {
-    gap: 10,
+    gap: 8,
   },
   sectionLabel: {
-    fontSize: 13,
+    color: '#a1a1aa',
+    fontSize: 12,
     fontWeight: '600',
-    color: '#fafafa',
-    letterSpacing: -0.2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  dateSelectorRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  datePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#121215',
+    borderWidth: 1,
+    borderColor: '#27272a',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  datePillSelected: {
+    borderColor: '#38bdf8',
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+  },
+  datePillText: {
+    color: '#71717a',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  datePillTextSelected: {
+    color: '#38bdf8',
+    fontWeight: '600',
   },
   loadingProjectsRow: {
     flexDirection: 'row',
@@ -381,44 +523,44 @@ const styles = StyleSheet.create({
     backgroundColor: '#121215',
     borderWidth: 1,
     borderColor: '#27272a',
-    borderRadius: 10,
+    borderRadius: 8,
     padding: 14,
     gap: 6,
   },
   warningTitle: {
+    color: '#fb7185',
     fontSize: 14,
     fontWeight: '600',
-    color: '#f59e0b',
   },
   warningDescription: {
-    fontSize: 13,
     color: '#71717a',
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
   },
   createProjectLink: {
     marginTop: 4,
-    alignSelf: 'flex-start',
   },
   createProjectLinkText: {
+    color: '#38bdf8',
     fontSize: 13,
-    color: '#fafafa',
     fontWeight: '600',
   },
   projectPillsRow: {
+    flexDirection: 'row',
     gap: 8,
     paddingVertical: 2,
   },
   projectPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
     backgroundColor: '#121215',
     borderWidth: 1,
     borderColor: '#27272a',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   projectPillSelected: {
+    borderColor: '#fafafa',
     backgroundColor: '#27272a',
-    borderColor: '#3f3f46',
   },
   projectPillText: {
     color: '#71717a',
@@ -429,39 +571,62 @@ const styles = StyleSheet.create({
     color: '#fafafa',
     fontWeight: '600',
   },
+  appendBanner: {
+    backgroundColor: 'rgba(56, 189, 248, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderRadius: 10,
+    padding: 12,
+    gap: 6,
+  },
+  appendBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  appendBannerTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#38bdf8',
+  },
+  appendBannerDescription: {
+    fontSize: 12,
+    color: '#a1a1aa',
+    lineHeight: 17,
+  },
   inputHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   charCounter: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 11,
   },
   charCounterValid: {
-    color: '#10b981',
+    color: '#34d399',
   },
   charCounterMuted: {
-    color: '#71717a',
+    color: '#52525b',
   },
   editorContainer: {
-    backgroundColor: '#18181b',
-    borderRadius: 12,
+    backgroundColor: '#121215',
     borderWidth: 1,
     borderColor: '#27272a',
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 180,
   },
   editorContainerFocused: {
     borderColor: '#3f3f46',
   },
   editorInput: {
-    minHeight: 220,
     color: '#fafafa',
-    fontSize: 15,
-    lineHeight: 24,
-    padding: 16,
+    fontSize: 14,
+    lineHeight: 22,
+    minHeight: 160,
   },
   actionContainer: {
-    marginTop: 6,
+    marginTop: 4,
   },
   saveButton: {
     backgroundColor: '#27272a',
@@ -473,20 +638,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveButtonDisabled: {
-    opacity: 0.35,
-  },
-  buttonProcessingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    opacity: 0.4,
   },
   saveButtonText: {
     color: '#fafafa',
     fontSize: 14,
     fontWeight: '600',
   },
+  buttonProcessingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.8,
   },
 });
