@@ -1,10 +1,12 @@
 import { DarkTheme, ThemeProvider } from 'expo-router';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { NavigationBar } from 'expo-navigation-bar';
 
 export default function RootLayout() {
   return (
     <ThemeProvider value={DarkTheme}>
+      <NavigationBar style="dark" />
       <Stack
         screenOptions={{
           headerStyle: {
