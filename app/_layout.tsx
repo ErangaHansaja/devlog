@@ -8,28 +8,6 @@ import * as NavigationBar from 'expo-navigation-bar';
 export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === 'android') {
-      if (typeof NavigationBar.setBackgroundColorAsync !== 'function') {
-        (NavigationBar as any).setBackgroundColorAsync = async (color: string) => {
-          try {
-            const ExpoNavBar = require('expo-navigation-bar/build/ExpoNavigationBar').default;
-            return await ExpoNavBar?.setBackgroundColorAsync?.(color);
-          } catch {}
-        };
-      }
-      if (typeof NavigationBar.setButtonStyleAsync !== 'function') {
-        (NavigationBar as any).setButtonStyleAsync = async (style: 'light' | 'dark') => {
-          try {
-            const ExpoNavBar = require('expo-navigation-bar/build/ExpoNavigationBar').default;
-            if (ExpoNavBar?.setButtonStyleAsync) {
-              return await ExpoNavBar.setButtonStyleAsync(style);
-            }
-            if (typeof NavigationBar.setStyle === 'function') {
-              NavigationBar.setStyle(style === 'light' ? 'dark' : 'light');
-            }
-          } catch {}
-        };
-      }
-
       NavigationBar.setBackgroundColorAsync('#09090b');
       NavigationBar.setButtonStyleAsync('light');
     }
