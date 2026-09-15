@@ -223,12 +223,12 @@ export default function LogDetailScreen() {
                 <View style={styles.generatingRow}>
                   <ActivityIndicator size="small" color="#fafafa" />
                   <Text style={styles.primaryGenerateButtonText}>
-                    Transforming with Gemini AI...
+                    Compiling standup with AI...
                   </Text>
                 </View>
               ) : (
                 <Text style={styles.primaryGenerateButtonText}>
-                  Generate AI Standup ✨
+                  Compile AI Standup ✨
                 </Text>
               )}
             </Pressable>
@@ -273,7 +273,7 @@ export default function LogDetailScreen() {
               {/* Retry / Regenerate button */}
               <Pressable
                 style={({ pressed }) => [
-                  styles.retryGeminiButton,
+                  styles.retryCompileButton,
                   isGenerating && styles.buttonDisabled,
                   pressed && !isGenerating && styles.buttonPressed,
                 ]}
@@ -283,8 +283,8 @@ export default function LogDetailScreen() {
                 {isGenerating ? (
                   <ActivityIndicator size="small" color="#fafafa" />
                 ) : (
-                  <Text style={styles.retryGeminiButtonText}>
-                    ↻ Regenerate
+                  <Text style={styles.retryCompileButtonText}>
+                    ↻ Recompile
                   </Text>
                 )}
               </Pressable>
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
-  retryGeminiButton: {
+  retryCompileButton: {
     backgroundColor: '#18181b',
     borderWidth: 1,
     borderColor: '#27272a',
@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
   },
-  retryGeminiButtonText: {
+  retryCompileButtonText: {
     color: '#a1a1aa',
     fontSize: 11,
     fontWeight: '500',
