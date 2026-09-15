@@ -221,7 +221,7 @@ export default function LogDetailScreen() {
             >
               {isGenerating ? (
                 <View style={styles.generatingRow}>
-                  <ActivityIndicator size="small" color="#09090b" />
+                  <ActivityIndicator size="small" color="#fafafa" />
                   <Text style={styles.primaryGenerateButtonText}>
                     Transforming with Gemini AI...
                   </Text>
@@ -584,14 +584,16 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   primaryGenerateButton: {
-    backgroundColor: '#fafafa',
+    backgroundColor: '#27272a',
+    borderWidth: 1,
+    borderColor: '#3f3f46',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryGenerateButtonText: {
-    color: '#09090b',
+    color: '#fafafa',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -839,14 +841,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   returnButton: {
-    backgroundColor: '#fafafa',
+    backgroundColor: '#27272a',
+    borderWidth: 1,
+    borderColor: '#3f3f46',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 6,
+    borderRadius: 8,
     marginTop: 8,
   },
   returnButtonText: {
-    color: '#09090b',
+    color: '#fafafa',
     fontSize: 13,
     fontWeight: '600',
   },
