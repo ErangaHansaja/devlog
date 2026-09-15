@@ -156,7 +156,7 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleTestConnection = async () => {
+  const handleTestConnection = async (modelToTest?: string) => {
     const keyToTest =
       apiKeyInput.trim() || process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 
@@ -168,10 +168,12 @@ export default function SettingsScreen() {
       return;
     }
 
+    const activeModel = modelToTest || selectedModel;
+
     try {
       setIsTesting(true);
       setTestResult(null);
-      const res = await testGeminiApiKey(keyToTest);
+      const res = await testGeminiApiKey(keyToTest, activeModel);
       setTestResult(res);
     } catch (err) {
       setTestResult({
@@ -216,6 +218,13 @@ export default function SettingsScreen() {
     setIsModelModalVisible(false);
     const storageSize = await calculateStorageSize();
     setStats((prev) => ({ ...prev, storageSizeKb: storageSize }));
+
+    // Test ping against the newly selected model so the badge displays the exact model tested
+    const keyToTest =
+      apiKeyInput.trim() || process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
+    if (keyToTest) {
+      handleTestConnection(cleanName);
+    }
   };
 
   // Fallback / default model list if fetch fails or is offline
@@ -360,7 +369,7 @@ export default function SettingsScreen() {
                   styles.secondaryButton,
                   isTesting && styles.buttonDisabled,
                 ]}
-                onPress={handleTestConnection}
+                onPress={() => handleTestConnection()}
                 disabled={isTesting}
               >
                 {isTesting ? (
@@ -432,24 +441,24 @@ export default function SettingsScreen() {
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>App Version</Text>
-              <Text style={styles.infoValue}>1.1.0 (Standalone APK)</Text>
+              <Text style={styles.infoValue}>v1.1.0</Text>
             </View>
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Storage Engine</Text>
-              <Text style={styles.infoValue}>AsyncStorage (100% Offline)</Text>
+              <Text style={styles.infoValue}>AsyncStorage</Text>
             </View>
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Total Data Stored</Text>
+              <Text style={styles.infoLabel}>Payload Size</Text>
               <Text style={styles.infoValue}>{stats.storageSizeKb} KB</Text>
             </View>
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Active Projects</Text>
+              <Text style={styles.infoLabel}>Active Repos</Text>
               <Text style={styles.infoValue}>
                 {stats.projectsCount} {stats.projectsCount === 1 ? 'repo' : 'repos'}
               </Text>
@@ -457,7 +466,7 @@ export default function SettingsScreen() {
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Total Standup Dumps</Text>
+              <Text style={styles.infoLabel}>Total Logs</Text>
               <Text style={styles.infoValue}>
                 {stats.logsCount} {stats.logsCount === 1 ? 'log' : 'logs'}
               </Text>

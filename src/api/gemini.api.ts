@@ -109,11 +109,11 @@ const DEFAULT_CANDIDATE_ENDPOINTS = [
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
 ];
 
-/** Resolves active candidate endpoints, prioritizing the user's selected model. */
-async function getCandidateEndpoints(): Promise<string[]> {
-  const selectedModel = await AsyncStorage.getItem(SELECTED_MODEL_STORAGE_KEY).catch(() => null);
-  if (selectedModel && selectedModel.trim()) {
-    const cleanModel = selectedModel.trim().replace(/^models\//, '');
+/** Resolves active candidate endpoints, prioritizing the specified or selected model. */
+async function getCandidateEndpoints(explicitModel?: string): Promise<string[]> {
+  const chosen = explicitModel || (await AsyncStorage.getItem(SELECTED_MODEL_STORAGE_KEY).catch(() => null));
+  if (chosen && chosen.trim()) {
+    const cleanModel = chosen.trim().replace(/^models\//, '');
     const userEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent`;
     return [userEndpoint, ...DEFAULT_CANDIDATE_ENDPOINTS.filter((e) => !e.includes(cleanModel))];
   }
@@ -181,7 +181,8 @@ export async function getActiveApiKey(explicitKey?: string): Promise<string> {
 
 /** Lightweight test ping to verify an API key with candidate fallback. */
 export async function testGeminiApiKey(
-  apiKey: string
+  apiKey: string,
+  targetModel?: string
 ): Promise<{ ok: boolean; message: string }> {
   const sanitized = apiKey.replace(/^["']|["']$/g, '').trim();
   if (!sanitized) {
@@ -196,7 +197,7 @@ export async function testGeminiApiKey(
     ],
   });
 
-  const candidates = await getCandidateEndpoints();
+  const candidates = await getCandidateEndpoints(targetModel);
   let lastErrorMessage = 'Failed to connect to AI API.';
 
   for (const endpoint of candidates) {
@@ -236,7 +237,8 @@ export async function testGeminiApiKey(
 async function callAI(
   apiKey: string,
   userPrompt: string,
-  systemPrompt: string = SYSTEM_PROMPT
+  systemPrompt: string = SYSTEM_PROMPT,
+  explicitModel?: string
 ): Promise<Response> {
   const requestBody = JSON.stringify({
     contents: [
@@ -254,7 +256,7 @@ async function callAI(
     },
   });
 
-  const candidates = await getCandidateEndpoints();
+  const candidates = await getCandidateEndpoints(explicitModel);
   let lastResponse: Response | null = null;
 
   for (const endpoint of candidates) {
@@ -335,7 +337,7 @@ export async function generateStandup(
 
   let response: Response;
   try {
-    response = await callAI(apiKey, userPrompt);
+    response = await callAI(apiKey, userPrompt, SYSTEM_PROMPT, config?.model);
   } catch (netErr) {
     throw new Error(
       `Network connection failed while calling AI API: ${netErr instanceof Error ? netErr.message : String(netErr)}`
