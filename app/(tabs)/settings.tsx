@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -16,9 +17,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import {
   GEMINI_API_KEY_STORAGE_KEY,
+  SELECTED_MODEL_STORAGE_KEY,
+  fetchAvailableModels,
   testGeminiApiKey,
 } from '../../src/api/gemini.api';
-import { STORAGE_KEYS } from '../../src/services/storage';
 import { getProjects } from '../../src/services/projects.service';
 import { getStandupLogs } from '../../src/services/logs.service';
 
@@ -27,6 +29,12 @@ export default function SettingsScreen() {
   const [isKeyVisible, setIsKeyVisible] = useState(false);
   const [isSavedInStorage, setIsSavedInStorage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Model Selection
+  const [selectedModel, setSelectedModel] = useState('gemini-2.0-flash');
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [isModelModalVisible, setIsModelModalVisible] = useState(false);
 
   // Ping test state
   const [isTesting, setIsTesting] = useState(false);
@@ -40,15 +48,31 @@ export default function SettingsScreen() {
     projectsCount: number;
     logsCount: number;
     hasEnvKey: boolean;
+    storageSizeKb: string;
   }>({
     projectsCount: 0,
     logsCount: 0,
     hasEnvKey: false,
+    storageSizeKb: '0.0',
   });
 
   useEffect(() => {
     loadSettings();
   }, []);
+
+  const calculateStorageSize = async (): Promise<string> => {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const entries = await AsyncStorage.multiGet(keys);
+      let totalBytes = 0;
+      for (const [key, value] of entries) {
+        totalBytes += (key ? key.length : 0) + (value ? value.length : 0);
+      }
+      return (totalBytes / 1024).toFixed(1);
+    } catch {
+      return '0.0';
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -60,14 +84,21 @@ export default function SettingsScreen() {
         setIsSavedInStorage(false);
       }
 
+      const storedModel = await AsyncStorage.getItem(SELECTED_MODEL_STORAGE_KEY);
+      if (storedModel) {
+        setSelectedModel(storedModel);
+      }
+
       const projects = await getProjects().catch(() => []);
       const logs = await getStandupLogs().catch(() => []);
       const hasEnv = Boolean(process.env.EXPO_PUBLIC_GEMINI_API_KEY?.trim());
+      const storageSize = await calculateStorageSize();
 
       setStats({
         projectsCount: projects.length,
         logsCount: logs.length,
         hasEnvKey: hasEnv,
+        storageSizeKb: storageSize,
       });
     } catch (err) {
       console.error('[settings] Failed to load settings:', err);
@@ -77,7 +108,7 @@ export default function SettingsScreen() {
   const handleSaveKey = async () => {
     const trimmed = apiKeyInput.trim();
     if (!trimmed) {
-      Alert.alert('Empty Key', 'Please enter a valid Gemini API key.');
+      Alert.alert('Empty Key', 'Please enter a valid API key.');
       return;
     }
 
@@ -86,7 +117,9 @@ export default function SettingsScreen() {
       await AsyncStorage.setItem(GEMINI_API_KEY_STORAGE_KEY, trimmed);
       setIsSavedInStorage(true);
       setTestResult(null);
-      Alert.alert('Key Saved', 'Your Gemini API key has been securely saved.');
+      const storageSize = await calculateStorageSize();
+      setStats((prev) => ({ ...prev, storageSizeKb: storageSize }));
+      Alert.alert('Key Saved', 'Your API key has been securely saved to local storage.');
     } catch (err) {
       Alert.alert(
         'Save Failed',
@@ -100,7 +133,7 @@ export default function SettingsScreen() {
   const handleClearKey = async () => {
     Alert.alert(
       'Clear API Key',
-      'Are you sure you want to remove your custom Gemini API key from this device?',
+      'Are you sure you want to remove your custom API key from this device?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -112,7 +145,9 @@ export default function SettingsScreen() {
               setApiKeyInput('');
               setIsSavedInStorage(false);
               setTestResult(null);
-            } catch (err) {
+              const storageSize = await calculateStorageSize();
+              setStats((prev) => ({ ...prev, storageSizeKb: storageSize }));
+            } catch {
               Alert.alert('Error', 'Failed to clear key.');
             }
           },
@@ -149,6 +184,46 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleOpenModelPicker = async () => {
+    setIsModelModalVisible(true);
+    if (availableModels.length === 0) {
+      await handleFetchModels();
+    }
+  };
+
+  const handleFetchModels = async () => {
+    const key = apiKeyInput.trim() || process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
+    setIsFetchingModels(true);
+    try {
+      const models = await fetchAvailableModels(key || undefined);
+      setAvailableModels(models);
+    } catch {
+      Alert.alert(
+        'Model Fetch Notice',
+        'Could not fetch remote model catalog. You can still select from recommended defaults.'
+      );
+    } finally {
+      setIsFetchingModels(false);
+    }
+  };
+
+  const handleSelectModel = async (modelName: string) => {
+    const cleanName = modelName.startsWith('models/')
+      ? modelName.replace('models/', '')
+      : modelName;
+    setSelectedModel(cleanName);
+    await AsyncStorage.setItem(SELECTED_MODEL_STORAGE_KEY, cleanName);
+    setIsModelModalVisible(false);
+    const storageSize = await calculateStorageSize();
+    setStats((prev) => ({ ...prev, storageSizeKb: storageSize }));
+  };
+
+  // Fallback / default model list if fetch fails or is offline
+  const displayModelIds: string[] =
+    availableModels.length > 0
+      ? availableModels
+      : ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
@@ -164,7 +239,7 @@ export default function SettingsScreen() {
           <View style={styles.header}>
             <Text style={styles.screenTitle}>Settings</Text>
             <Text style={styles.screenSubtitle}>
-              API configuration & offline storage
+              Model intelligence & offline storage
             </Text>
           </View>
 
@@ -172,19 +247,19 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderIcon}>
-                <Ionicons name="sparkles" size={18} color="#38bdf8" />
+                <Ionicons name="hardware-chip-outline" size={18} color="#38bdf8" />
               </View>
               <View style={styles.cardHeaderMeta}>
-                <Text style={styles.cardTitle}>AI Configuration</Text>
+                <Text style={styles.cardTitle}>AI Model Configuration</Text>
                 <Text style={styles.cardSubtitle}>
-                  Google Gemini 1.5 Flash endpoint
+                  Standup compiler & synthesis engine
                 </Text>
               </View>
             </View>
 
             {/* Key Status Pill */}
             <View style={styles.statusBannerRow}>
-              <Text style={styles.statusLabel}>Status:</Text>
+              <Text style={styles.statusLabel}>Key Status:</Text>
               {isSavedInStorage ? (
                 <View style={[styles.badge, styles.badgeSuccess]}>
                   <View style={[styles.dot, styles.dotSuccess]} />
@@ -211,12 +286,12 @@ export default function SettingsScreen() {
 
             {/* Input Section */}
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputLabel}>Gemini API Key</Text>
+              <Text style={styles.inputLabel}>API Key</Text>
               <View style={styles.inputContainer}>
                 <TextInput
                   style={styles.textInput}
                   secureTextEntry={!isKeyVisible}
-                  placeholder="Paste your Gemini API key (AIzaSy...)"
+                  placeholder="Enter your API key..."
                   placeholderTextColor="#52525b"
                   value={apiKeyInput}
                   onChangeText={(t) => {
@@ -239,8 +314,25 @@ export default function SettingsScreen() {
                 </Pressable>
               </View>
               <Text style={styles.helperText}>
-                Stored exclusively in local AsyncStorage under @gemini_api_key.
+                Stored locally on your device in secure offline storage.
               </Text>
+            </View>
+
+            {/* Model Selector Card Row */}
+            <View style={styles.inputWrapper}>
+              <Text style={styles.inputLabel}>Selected Model</Text>
+              <Pressable
+                style={styles.modelPickerButton}
+                onPress={handleOpenModelPicker}
+              >
+                <View style={styles.modelPickerContent}>
+                  <Ionicons name="sparkles-outline" size={16} color="#38bdf8" />
+                  <Text style={styles.modelPickerText} numberOfLines={1}>
+                    {selectedModel}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#71717a" />
+              </Pressable>
             </View>
 
             {/* Action Buttons */}
@@ -328,25 +420,31 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderIcon}>
-                <Ionicons name="information-circle" size={18} color="#a1a1aa" />
+                <Ionicons name="information-circle-outline" size={18} color="#a1a1aa" />
               </View>
               <View style={styles.cardHeaderMeta}>
                 <Text style={styles.cardTitle}>Application Information</Text>
                 <Text style={styles.cardSubtitle}>
-                  Architecture & storage health
+                  Architecture & storage metrics
                 </Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>App Version</Text>
-              <Text style={styles.infoValue}>1.0.0 (Standalone APK)</Text>
+              <Text style={styles.infoValue}>1.1.0 (Standalone APK)</Text>
             </View>
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Local Database</Text>
+              <Text style={styles.infoLabel}>Storage Engine</Text>
               <Text style={styles.infoValue}>AsyncStorage (100% Offline)</Text>
+            </View>
+            <View style={styles.divider} />
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Total Data Stored</Text>
+              <Text style={styles.infoValue}>{stats.storageSizeKb} KB</Text>
             </View>
             <View style={styles.divider} />
 
@@ -367,6 +465,94 @@ export default function SettingsScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Model Selection Modal */}
+      <Modal
+        visible={isModelModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsModelModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setIsModelModalVisible(false)}
+        >
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Select AI Model</Text>
+                <Text style={styles.modalSubtitle}>
+                  Choose the synthesis engine for standups
+                </Text>
+              </View>
+              <Pressable
+                style={styles.modalRefreshButton}
+                onPress={handleFetchModels}
+                disabled={isFetchingModels}
+              >
+                {isFetchingModels ? (
+                  <ActivityIndicator size="small" color="#38bdf8" />
+                ) : (
+                  <Ionicons name="refresh" size={16} color="#71717a" />
+                )}
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+              {displayModelIds.map((modelId) => {
+                const isSelected =
+                  selectedModel === modelId ||
+                  selectedModel.endsWith(`/${modelId}`);
+
+                return (
+                  <Pressable
+                    key={modelId}
+                    style={[
+                      styles.modelOptionCard,
+                      isSelected && styles.modelOptionCardActive,
+                    ]}
+                    onPress={() => handleSelectModel(modelId)}
+                  >
+                    <View style={styles.modelOptionInfo}>
+                      <View style={styles.modelOptionTitleRow}>
+                        <Text
+                          style={[
+                            styles.modelOptionName,
+                            isSelected && styles.modelOptionNameActive,
+                          ]}
+                        >
+                          {modelId}
+                        </Text>
+                        {isSelected && (
+                          <View style={styles.selectedBadge}>
+                            <Text style={styles.selectedBadgeText}>Active</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                    <Ionicons
+                      name={
+                        isSelected
+                          ? 'checkmark-circle'
+                          : 'radio-button-off-outline'
+                      }
+                      size={20}
+                      color={isSelected ? '#38bdf8' : '#3f3f46'}
+                    />
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <Pressable
+              style={styles.modalCloseButton}
+              onPress={() => setIsModelModalVisible(false)}
+            >
+              <Text style={styles.modalCloseButtonText}>Close</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -525,6 +711,28 @@ const styles = StyleSheet.create({
     color: '#52525b',
     lineHeight: 16,
   },
+  modelPickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#18181b',
+    borderWidth: 1,
+    borderColor: '#27272a',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  modelPickerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  modelPickerText: {
+    fontSize: 14,
+    color: '#fafafa',
+    fontWeight: '500',
+  },
   actionButtonsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -621,5 +829,103 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#1f1f23',
+  },
+  // Modal styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxHeight: '80%',
+    backgroundColor: '#121215',
+    borderWidth: 1,
+    borderColor: '#27272a',
+    borderRadius: 16,
+    padding: 20,
+    gap: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fafafa',
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: '#71717a',
+    marginTop: 2,
+  },
+  modalRefreshButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#18181b',
+    borderWidth: 1,
+    borderColor: '#27272a',
+  },
+  modalList: {
+    maxHeight: 320,
+  },
+  modelOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#18181b',
+    borderWidth: 1,
+    borderColor: '#27272a',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 8,
+  },
+  modelOptionCardActive: {
+    borderColor: '#38bdf8',
+    backgroundColor: 'rgba(56, 189, 248, 0.05)',
+  },
+  modelOptionInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  modelOptionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modelOptionName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#e4e4e7',
+  },
+  modelOptionNameActive: {
+    color: '#38bdf8',
+  },
+  selectedBadge: {
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  selectedBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#38bdf8',
+    textTransform: 'uppercase',
+  },
+  modalCloseButton: {
+    backgroundColor: '#27272a',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#fafafa',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

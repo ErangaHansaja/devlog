@@ -121,19 +121,22 @@ async function getCandidateEndpoints(): Promise<string[]> {
 }
 
 /** Fetches available models from Google API supporting generateContent. */
-export async function fetchAvailableModels(apiKey: string): Promise<string[]> {
-  const sanitized = apiKey.replace(/^["']|["']$/g, '').trim();
-  if (!sanitized) return [];
+export async function fetchAvailableModels(explicitApiKey?: string): Promise<string[]> {
+  const key = explicitApiKey || (await getActiveApiKey().catch(() => ''));
+  const sanitized = key.replace(/^["']|["']$/g, '').trim();
+  if (!sanitized) {
+    return ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+  }
 
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${sanitized}`
     );
-    if (!res.ok) return ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.6-flash'];
+    if (!res.ok) return ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
 
     const data = await res.json();
     if (!Array.isArray(data.models)) {
-      return ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.6-flash'];
+      return ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
     }
 
     const models = data.models
@@ -144,10 +147,10 @@ export async function fetchAvailableModels(apiKey: string): Promise<string[]> {
       )
       .map((m: { name: string }) => m.name.replace(/^models\//, ''));
 
-    return models.length > 0 ? models : ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.6-flash'];
+    return models.length > 0 ? models : ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
   } catch (err) {
     console.warn('[ai] Failed to fetch models:', err);
-    return ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.6-flash'];
+    return ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
   }
 }
 
