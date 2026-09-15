@@ -3,18 +3,24 @@ import { Platform } from 'react-native';
 import { DarkTheme, ThemeProvider } from 'expo-router';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import * as NavigationBar from 'expo-navigation-bar';
+import { NavigationBar } from 'expo-navigation-bar';
 
 export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === 'android') {
-      NavigationBar.setBackgroundColorAsync('#09090b');
-      NavigationBar.setButtonStyleAsync('light');
+      try {
+        if (typeof NavigationBar.setStyle === 'function') {
+          NavigationBar.setStyle('light');
+        }
+      } catch {
+        // Safe fallback in environments where native module is unavailable
+      }
     }
   }, []);
 
   return (
     <ThemeProvider value={DarkTheme}>
+      <NavigationBar style="light" />
       <Stack
         screenOptions={{
           headerStyle: {
