@@ -54,19 +54,42 @@ export async function getStandupLogsByProject(
 export async function getTodaysLog(
   projectId: string
 ): Promise<StandupLog | null> {
+  return getLogByProjectAndDate(projectId, new Date());
+}
+
+/** Finds a standup log for a given project on a specific calendar date. */
+export async function getLogByProjectAndDate(
+  projectId: string,
+  targetDate: Date | string
+): Promise<StandupLog | null> {
+  const targetStr =
+    targetDate instanceof Date
+      ? targetDate.toISOString().slice(0, 10)
+      : new Date(targetDate).toISOString().slice(0, 10);
+
   const logs = await readLogs();
   return (
-    logs.find((l) => l.projectId === projectId && isToday(l.createdAt)) ?? null
+    logs.find(
+      (l) =>
+        l.projectId === projectId &&
+        new Date(l.createdAt).toISOString().slice(0, 10) === targetStr
+    ) ?? null
   );
 }
 
-/** Persists a raw standup dump, enforcing one log per project per day. */
+/** Persists a raw standup dump. If a log exists for that project on that day, appends to it. */
 export async function createStandupLog(
   input: CreateStandupLogInput
-): Promise<StandupLog | null> {
-  const existing = await getTodaysLog(input.projectId);
+): Promise<StandupLog> {
+  const targetDate = input.date ? new Date(input.date) : new Date();
+  const existing = await getLogByProjectAndDate(input.projectId, targetDate);
+
   if (existing) {
-    return null;
+    const mergedRawDump = `${existing.rawDump.trim()}\n\n---\n\n${input.rawDump.trim()}`;
+    const updated = await updateStandupLog(existing.id, {
+      rawDump: mergedRawDump,
+    });
+    return updated || existing;
   }
 
   const newLog: StandupLog = {
@@ -75,7 +98,7 @@ export async function createStandupLog(
     rawDump: input.rawDump,
     structured: EMPTY_STRUCTURE,
     singlishPitch: '',
-    createdAt: new Date().toISOString(),
+    createdAt: targetDate.toISOString(),
   };
 
   const logs = await readLogs();
@@ -107,4 +130,17 @@ export async function deleteStandupLog(id: string): Promise<boolean> {
   const filtered = logs.filter((l) => l.id !== id);
   if (filtered.length === logs.length) return false;
   return writeLogs(filtered);
+}
+
+/** Deletes all standup logs linked to a project. Returns count of removed logs. */
+export async function deleteStandupLogsByProject(
+  projectId: string
+): Promise<number> {
+  const logs = await readLogs();
+  const remaining = logs.filter((l) => l.projectId !== projectId);
+  const deletedCount = logs.length - remaining.length;
+  if (deletedCount > 0) {
+    await writeLogs(remaining);
+  }
+  return deletedCount;
 }

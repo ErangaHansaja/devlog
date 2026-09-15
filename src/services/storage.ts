@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   SETTINGS: 'devlog:settings',
   SCHEMA_VERSION: 'devlog:schema_version',
   GEMINI_API_KEY: '@gemini_api_key',
+  SELECTED_MODEL: '@selected_model',
 } as const;
 
 const CURRENT_SCHEMA_VERSION = 1;
